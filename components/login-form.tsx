@@ -22,12 +22,24 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      router.push("/protected");
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({ email, password });
+
+      if (authError) throw authError;
+
+      const { data: usuario, error: usuarioError } = await supabase
+        .from("usuario")
+        .select("rol")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (usuarioError || !usuario) throw new Error("No se pudo obtener el rol");
+
+      if (usuario.rol === "administrador") router.push("/admin");
+      else if (usuario.rol === "odontologo") router.push("/dentist");
+      else if (usuario.rol === "paciente") router.push("/patient");
+      else throw new Error("Rol no reconocido");
+
     } catch {
       setError("Correo o contraseña incorrectos");
     } finally {
@@ -39,7 +51,7 @@ export function LoginForm() {
     <div className="flex min-h-svh w-full items-center justify-center bg-[#F1F4FA] p-6">
       <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-sm">
         {/* Left panel — brand presence */}
-        <div className="hidden w-1/2 flex-col justify-between bg-[#283A97] p-10 text-white md:flex">
+        <div className="hidden w-1/2 flex-col justify-between bg-[#F4F5F8] p-10 md:flex">
           <div>
             <div className="flex items-center gap-2">
               <svg
@@ -51,7 +63,7 @@ export function LoginForm() {
               >
                 <path
                   d="M12 3C9 3 6.5 4.5 6 7c-.4 2 .3 4 .8 6 .4 1.7.7 4.3 1.7 6.2.4.8 1.6.8 2-.1.5-1.2.8-3 1.5-3 .7 0 1 1.8 1.5 3 .4.9 1.6.9 2 .1 1-1.9 1.3-4.5 1.7-6.2.5-2 1.2-4 .8-6-.5-2.5-3-4-6-4Z"
-                  fill="#FFFFFF"
+                  fill="#283A97"
                 />
                 <path
                   d="M9 8c.8-.8 2-1 3-.2.8-.8 2.2-.6 3 .2.8.9.6 2.3-.4 3.2L12 13.5l-2.6-2.3c-1-.9-1.2-2.3-.4-3.2Z"
@@ -59,28 +71,31 @@ export function LoginForm() {
                 />
               </svg>
               <div>
-                <p className="font-[var(--font-display)] text-lg leading-none">
+                <p className="font-[var(--font-display)] text-lg leading-none text-[#283A97]">
                   Clident
                 </p>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#9FB3E8]">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#7C86B8]">
                   Sonríale a la vida
                 </p>
               </div>
             </div>
 
-            <h1 className="mt-12 font-[var(--font-display)] text-2xl leading-snug">
+            <h1 className="mt-12 font-[var(--font-display)] text-2xl leading-snug text-[#283A97]">
               Bienvenido a su clínica dental de confianza
             </h1>
-            <p className="mt-3 max-w-sm text-sm text-[#C7D3F0]">
+            <p className="mt-3 max-w-sm text-sm text-[#6B7280]">
               Gestione sus citas, acceda a su historial médico y descubra una
               nueva forma de cuidar su sonrisa con la precisión de Golfito.
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/15 bg-white/5 p-5">
-            <p className="text-sm text-[#C7D3F0]">
-              &ldquo;Sonríale a la vida&rdquo; — Dra. Maureen Téllez Durán
-            </p>
+          <div className="overflow-hidden rounded-xl">
+            {/* Replace this src with your own image, e.g. /images/clinica-interior.jpg */}
+            <img
+              src="/images/clinica-interior.jpg"
+              alt="Interior de la clínica dental"
+              className="aspect-[4/3] w-full object-cover"
+            />
           </div>
         </div>
 
