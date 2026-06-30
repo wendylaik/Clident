@@ -7,14 +7,10 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  // If the env vars are not set, skip proxy check. You can remove this
-  // once you setup the project.
   if (!hasEnvVars) {
     return supabaseResponse;
   }
 
-  // With Fluid compute, don't put this client in a global environment
-  // variable. Always create a new one on each request.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -38,39 +34,67 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const { pathname } = request.nextUrl;
+
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/auth/login",
+    "/auth/sign-up",
+    "/auth/forgot-password",
+    "/auth/update-password",
+    "/auth/confirm",
+    "/auth/error",
+    "/auth/sign-up-success",
+  ];
+
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // If no session and trying to access a protected route → redirect to login
+  if (!user && !isPublicRoute && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+  // If session exists, get the role from usuario table
+  if (user) {
+    const { data: usuario } = await supabase
+      .from("usuario")
+      .select("rol")
+      .eq("id", user.sub)
+      .single();
+
+    const rol = usuario?.rol;
+
+    // If logged in and trying to access a public route → redirect to their dashboard
+    if (isPublicRoute && pathname !== "/auth/update-password") {
+      if (rol === "administrador") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+      if (rol === "odontologo") {
+        return NextResponse.redirect(new URL("/dentist", request.url));
+      }
+      if (rol === "paciente") {
+        return NextResponse.redirect(new URL("/patient", request.url));
+      }
+    }
+
+    // Block cross-role access
+    if (pathname.startsWith("/admin") && rol !== "administrador") {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+    if (pathname.startsWith("/dentist") && rol !== "odontologo") {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+    if (pathname.startsWith("/patient") && rol !== "paciente") {
+      return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+  }
 
   return supabaseResponse;
 }
