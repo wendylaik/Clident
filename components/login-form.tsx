@@ -14,6 +14,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registrado") === "true";
+  const passwordUpdated = searchParams.get("contrasena") === "actualizada";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +112,12 @@ export function LoginForm() {
           {justRegistered && (
             <div className="mt-4 rounded-lg border border-[#A8E6C1] bg-[#EFFBF3] px-4 py-2.5 text-sm text-[#1B7A41]">
               Su cuenta fue creada exitosamente. Ya puede iniciar sesión.
+            </div>
+          )}
+
+          {passwordUpdated && (
+            <div className="mt-4 rounded-lg border border-[#A8E6C1] bg-[#EFFBF3] px-4 py-2.5 text-sm text-[#1B7A41]">
+              Su contraseña fue actualizada exitosamente. Ya puede iniciar sesión.
             </div>
           )}
 
