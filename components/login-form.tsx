@@ -31,19 +31,30 @@ export function LoginForm() {
 
       const { data: usuario, error: usuarioError } = await supabase
         .from("usuario")
-        .select("rol")
+        .select("rol, es_activo")
         .eq("id", authData.user.id)
         .single();
 
-      if (usuarioError || !usuario) throw new Error("No se pudo obtener el rol");
+      if (usuarioError || !usuario) {
+        await supabase.auth.signOut();
+        throw new Error("No se encontró un perfil asociado a este usuario. Contacte al administrador.");
+      }
+
+      if (!usuario.es_activo) {
+        await supabase.auth.signOut();
+        throw new Error("Su cuenta está desactivada. Contacte al administrador.");
+      }
 
       if (usuario.rol === "administrador") router.push("/admin");
       else if (usuario.rol === "odontologo") router.push("/dentist");
       else if (usuario.rol === "paciente") router.push("/patient");
-      else throw new Error("Rol no reconocido");
+      else {
+        await supabase.auth.signOut();
+        throw new Error("Rol no reconocido. Contacte al administrador.");
+      }
 
-    } catch {
-      setError("Correo o contraseña incorrectos");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Correo o contraseña incorrectos");
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +102,7 @@ export function LoginForm() {
           </div>
         </div>
 
+        {/* Right panel — form */}
         <div className="flex w-full flex-col justify-center p-8 md:w-1/2 md:p-12">
           <h2 className="font-[var(--font-display)] text-2xl text-[#283A97]">
             Iniciar sesión
@@ -113,10 +125,7 @@ export function LoginForm() {
 
           <form onSubmit={handleLogin} className="mt-8 flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-[#283A97]"
-              >
+              <label htmlFor="email" className="text-sm font-medium text-[#283A97]">
                 Correo electrónico
               </label>
               <input
@@ -132,16 +141,10 @@ export function LoginForm() {
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="text-sm font-medium text-[#283A97]"
-                >
+                <label htmlFor="password" className="text-sm font-medium text-[#283A97]">
                   Contraseña
                 </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-[#00A8D8] hover:underline"
-                >
+                <Link href="/auth/forgot-password" className="text-xs text-[#00A8D8] hover:underline">
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
@@ -177,10 +180,7 @@ export function LoginForm() {
 
           <p className="mt-6 text-center text-sm text-[#6B7280]">
             ¿Es su primera visita?{" "}
-            <Link
-              href="/auth/sign-up"
-              className="font-medium text-[#283A97] hover:underline"
-            >
+            <Link href="/auth/sign-up" className="font-medium text-[#283A97] hover:underline">
               Registrarse como paciente
             </Link>
           </p>

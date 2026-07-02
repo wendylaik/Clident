@@ -24,10 +24,18 @@ export async function registerPatient({
 }: RegisterPatientParams): Promise<RegisterPatientResult> {
   const supabase = createClient();
 
-  // 1. Create the user in Supabase Auth.
-  // Everything else (usuario, paciente, expediente, odontograma, piezas)
-  // happens inside the crear_paciente_completo Postgres function,
-  // which runs as a single transaction.
+  // Check if cedula already exists before attempting registration
+  const { data: existingCedula } = await supabase
+    .from("paciente")
+    .select("id")
+    .eq("cedula", cedula)
+    .single();
+
+  if (existingCedula) {
+    return { success: false, error: "Ya existe un paciente registrado con esa cédula" };
+  }
+
+  // Create the user in Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -45,7 +53,7 @@ export async function registerPatient({
 
   const userId = authData.user.id;
 
-  // 2. Call the Postgres function that creates everything else atomically.
+  // Call the Postgres function that creates everything else atomically
   const { error: rpcError } = await supabase.rpc("crear_paciente_completo", {
     p_id_usuario: userId,
     p_nombre: fullName,
@@ -56,10 +64,13 @@ export async function registerPatient({
   });
 
   if (rpcError) {
+    if (rpcError.message.includes("duplicate key") || rpcError.code === "23505") {
+      return { success: false, error: "Ya existe un paciente registrado con esa cédula" };
+    }
     return { success: false, error: rpcError.message };
   }
 
-  // Sign out immediately after registration so the user logs in manually
+  // Sign out immediately so the user logs in manually
   await supabase.auth.signOut();
 
   return { success: true };
