@@ -1,8 +1,10 @@
-export default function AdminAppointments() {
+import { Suspense } from "react";
+import AppointmentsCalendar from "@/components/appointments-calendar";
+
+export default function Page() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-[#283A97]">Citas</h1>
-      <p className="mt-1 text-sm text-[#6B7280]">Gestión del calendario de citas.</p>
-    </div>
+    <Suspense fallback={<div className="flex items-center justify-center h-64"><p className="text-sm text-[#6B7280]">Cargando...</p></div>}>
+      <AppointmentsCalendar role="admin" />
+    </Suspense>
   );
 }
