@@ -59,5 +59,8 @@ export async function registerPatient({
     return { success: false, error: rpcError.message };
   }
 
+  // Sign out immediately after registration so the user logs in manually
+  await supabase.auth.signOut();
+
   return { success: true };
 }

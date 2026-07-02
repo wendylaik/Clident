@@ -3,21 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 
 type Step = "email" | "code" | "password";
 
 const Logo = () => (
   <div className="flex items-center gap-2 mb-8">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path
-        d="M12 3C9 3 6.5 4.5 6 7c-.4 2 .3 4 .8 6 .4 1.7.7 4.3 1.7 6.2.4.8 1.6.8 2-.1.5-1.2.8-3 1.5-3 .7 0 1 1.8 1.5 3 .4.9 1.6.9 2 .1 1-1.9 1.3-4.5 1.7-6.2.5-2 1.2-4 .8-6-.5-2.5-3-4-6-4Z"
-        fill="#283A97"
-      />
-      <path
-        d="M9 8c.8-.8 2-1 3-.2.8-.8 2.2-.6 3 .2.8.9.6 2.3-.4 3.2L12 13.5l-2.6-2.3c-1-.9-1.2-2.3-.4-3.2Z"
-        fill="#00C2F3"
-      />
-    </svg>
+    <Image
+      src="/images/logo-clinica.png"
+      alt="Clident - Clínica Dental"
+      width={50}
+      height={30}
+      className="object-contain"
+    />
     <div>
       <p className="text-sm font-semibold leading-none text-[#283A97]">Clident</p>
       <p className="text-[10px] uppercase tracking-widest text-[#7C86B8]">Clínica Dental</p>

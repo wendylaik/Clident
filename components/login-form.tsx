@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -55,22 +56,13 @@ export function LoginForm() {
         <div className="hidden w-1/2 flex-col justify-between bg-[#F4F5F8] p-10 md:flex">
           <div>
             <div className="flex items-center gap-2">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                className="shrink-0"
-              >
-                <path
-                  d="M12 3C9 3 6.5 4.5 6 7c-.4 2 .3 4 .8 6 .4 1.7.7 4.3 1.7 6.2.4.8 1.6.8 2-.1.5-1.2.8-3 1.5-3 .7 0 1 1.8 1.5 3 .4.9 1.6.9 2 .1 1-1.9 1.3-4.5 1.7-6.2.5-2 1.2-4 .8-6-.5-2.5-3-4-6-4Z"
-                  fill="#283A97"
-                />
-                <path
-                  d="M9 8c.8-.8 2-1 3-.2.8-.8 2.2-.6 3 .2.8.9.6 2.3-.4 3.2L12 13.5l-2.6-2.3c-1-.9-1.2-2.3-.4-3.2Z"
-                  fill="#00C2F3"
-                />
-              </svg>
+              <Image
+                src="/images/logo-clinica.png"
+                alt="Clident - Clínica Dental"
+                width={60}
+                height={30}
+                className="object-contain"
+              />
               <div>
                 <p className="font-[var(--font-display)] text-lg leading-none text-[#283A97]">
                   Clident
@@ -84,23 +76,21 @@ export function LoginForm() {
             <h1 className="mt-12 font-[var(--font-display)] text-2xl leading-snug text-[#283A97]">
               Bienvenido a su clínica dental de confianza
             </h1>
-            <p className="mt-3 max-w-sm text-sm text-[#6B7280]">
+            <p className="mt-3 max-w-sm text-sm text-[#6B7280] mb-8">
               Gestione sus citas, acceda a su historial médico y descubra una
-              nueva forma de cuidar su sonrisa con la precisión de Golfito.
+              nueva forma de cuidar su sonrisa.
             </p>
           </div>
 
           <div className="overflow-hidden rounded-xl">
-            {/* Replace this src with your own image, e.g. /images/clinica-interior.jpg */}
             <img
-              src="/images/clinica-interior.jpg"
+              src="/images/consultorio.jpg"
               alt="Interior de la clínica dental"
-              className="aspect-[4/3] w-full object-cover"
+              className="aspect-[16/9] w-full object-cover"
             />
           </div>
         </div>
 
-        {/* Right panel — form */}
         <div className="flex w-full flex-col justify-center p-8 md:w-1/2 md:p-12">
           <h2 className="font-[var(--font-display)] text-2xl text-[#283A97]">
             Iniciar sesión
