@@ -62,15 +62,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If session exists, get the role from usuario table
+  // If session exists, read role from JWT app_metadata (no DB query needed)
   if (user) {
-    const { data: usuario } = await supabase
-      .from("usuario")
-      .select("rol")
-      .eq("id", user.sub)
-      .single();
-
-    const rol = usuario?.rol;
+    const rol = user.app_metadata?.rol as string | undefined;
 
     // If logged in and trying to access a public route → redirect to their dashboard
     if (isPublicRoute && pathname !== "/auth/update-password") {
@@ -80,9 +74,10 @@ export async function updateSession(request: NextRequest) {
       if (rol === "odontologo") {
         return NextResponse.redirect(new URL("/dentist", request.url));
       }
-      if (rol === "paciente") {
-        return NextResponse.redirect(new URL("/patient", request.url));
-      }
+      if (user) {
+      console.log("user app_metadata:", user.app_metadata);
+      const rol = user.app_metadata?.rol as string | undefined;
+      console.log("rol detectado:", rol);}
     }
 
     // Block cross-role access

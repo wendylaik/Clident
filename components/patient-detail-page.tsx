@@ -1,8 +1,8 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Patient = {
   id: string;
@@ -69,9 +69,13 @@ export default function PatientDetailPage({
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    if (patientId) fetchPatient();
-  }, [patientId]);
+    useEffect(() => {
+    if (patientId) {
+        setIsEditing(false);
+        setActiveTab("perfil");
+        fetchPatient();
+    }
+    }, [patientId]);
 
   const handleSave = async () => {
     setSaveError(null);
