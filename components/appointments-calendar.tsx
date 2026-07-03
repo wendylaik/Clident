@@ -276,14 +276,14 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     };
 
    const handleEventClick = (info: EventClickArg) => {
-    console.log("extendedProps:", info.event.extendedProps);
-    const appointment = info.event.extendedProps.appointment as Appointment | null;
-    console.log("appointment:", appointment);
-    if (!appointment) return;
-    setSelectedAppointment(appointment);
-    setShowReschedule(false);
-    setDetailError(null);
-    setShowDetailModal(true);
+        console.log("extendedProps:", info.event.extendedProps);
+        const appointment = info.event.extendedProps.appointment as Appointment | null;
+        console.log("appointment:", appointment);
+        if (!appointment) return;
+        setSelectedAppointment(appointment);
+        setShowReschedule(false);
+        setDetailError(null);
+        setShowDetailModal(true);
     };
 
   const handleCreateAppointment = async () => {
@@ -380,6 +380,11 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const inputClass = "rounded-lg border border-[#D7DEF2] bg-white px-4 py-2.5 text-sm text-[#1F2937] placeholder:text-[#9CA3AF] focus:border-[#00C2F3] focus:outline-none focus:ring-2 focus:ring-[#00C2F3]/30 w-full";
   const labelClass = "text-sm font-medium text-[#283A97]";
+ 
+  const todayStr = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+})();
 
   const [today] = useState(() => new Date());
 
@@ -658,92 +663,72 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
               </div>
             )}
 
-            {detailError && <p className="text-sm text-[#E45C3C] mb-3">{detailError}</p>}
+{detailError && <p className="text-sm text-[#E45C3C] mb-3">{detailError}</p>}
 
-            {/* Actions */}
+{(() => {
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  const isPast = selectedAppointment.fecha < todayStr ||
+    (selectedAppointment.fecha === todayStr && selectedAppointment.hora?.slice(0, 5) < currentTime);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Patient actions */}
+      {role === "patient" && (
+        <>
+          {selectedAppointment.estado === "programada" && !isPast && (
             <div className="flex flex-col gap-2">
-             
-              {/* Patient actions */}
-                {role === "patient" && (
-                <>
-                    {selectedAppointment.estado === "programada" && (
-                    <div className="flex flex-col gap-2">
-                        <button
-                        onClick={handleConfirmAttendance}
-                        disabled={detailLoading}
-                        className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] disabled:opacity-60 transition-colors"
-                        >
-                        Confirmar asistencia
-                        </button>
-                        <button
-                        onClick={handleCancelAppointment}
-                        disabled={detailLoading}
-                        className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors"
-                        >
-                        Cancelar cita
-                        </button>
-                    </div>
-                    )}
-                    {selectedAppointment.estado === "confirmada" && (
-                    <button
-                        onClick={handleCancelAppointment}
-                        disabled={detailLoading}
-                        className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors"
-                    >
-                        Cancelar cita
-                    </button>
-                    )}
-                </>
-                )}
-
-              {/* Admin/dentist actions */}
-            {role !== "patient" && (
-  <>
-    {["programada", "confirmada"].includes(selectedAppointment.estado) && (
-      <div className="flex flex-col gap-2">
-        <button
-          onClick={() => { setShowReschedule(!showReschedule); setDetailError(null); }}
-          className="rounded-lg border border-[#D7DEF2] text-[#283A97] px-4 py-2.5 text-sm font-medium hover:bg-[#E8EBF7] transition-colors"
-        >
-          {showReschedule ? "Cancelar reprogramación" : "Reprogramar"}
-        </button>
-
-        {!showReschedule && (
-          <>
-            <button
-              onClick={() => {
-                router.push(`${role === "admin" ? "/admin" : "/dentist"}/consultations/new?citaId=${selectedAppointment.id}`);
-                setShowDetailModal(false);
-              }}
-              className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] transition-colors"
-            >
-              Iniciar consulta
-            </button>
-            <button
-              onClick={() => handleMarkAttendance(false)}
-              disabled={detailLoading}
-              className="rounded-lg bg-[#E45C3C] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#C94A2A] disabled:opacity-60 transition-colors"
-            >
-              No asistió
-            </button>
-            <button
-              onClick={handleCancelAppointment}
-              disabled={detailLoading}
-              className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors"
-            >
-              Cancelar cita
-            </button>
-          </>
-        )}
-      </div>
-    )}
-  </>
-)}
-
-              <button onClick={() => { setShowDetailModal(false); setShowReschedule(false); setDetailError(null); }} className="rounded-lg border border-[#D7DEF2] px-4 py-2.5 text-sm text-[#6B7280] hover:bg-[#F4F5F8] transition-colors">
-                Cerrar
+              <button onClick={handleConfirmAttendance} disabled={detailLoading} className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] disabled:opacity-60 transition-colors">
+                Confirmar asistencia
+              </button>
+              <button onClick={handleCancelAppointment} disabled={detailLoading} className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors">
+                Cancelar cita
               </button>
             </div>
+          )}
+          {selectedAppointment.estado === "confirmada" && !isPast && (
+            <button onClick={handleCancelAppointment} disabled={detailLoading} className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors">
+              Cancelar cita
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Admin/dentist actions */}
+      {role !== "patient" && (
+        <>
+          {["programada", "confirmada"].includes(selectedAppointment.estado) && (
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { setShowReschedule(!showReschedule); setDetailError(null); }} className="rounded-lg border border-[#D7DEF2] text-[#283A97] px-4 py-2.5 text-sm font-medium hover:bg-[#E8EBF7] transition-colors">
+                {showReschedule ? "Cancelar reprogramación" : "Reprogramar"}
+              </button>
+              {!showReschedule && (
+                <>
+                  <button
+                    onClick={() => { router.push(`${role === "admin" ? "/admin" : "/dentist"}/consultations/new?citaId=${selectedAppointment.id}`); setShowDetailModal(false); }}
+                    className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] transition-colors"
+                  >
+                    Iniciar consulta
+                  </button>
+                  <button onClick={() => handleMarkAttendance(false)} disabled={detailLoading} className="rounded-lg bg-[#E45C3C] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#C94A2A] disabled:opacity-60 transition-colors">
+                    No asistió
+                  </button>
+                  <button onClick={handleCancelAppointment} disabled={detailLoading} className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors">
+                    Cancelar cita
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      <button onClick={() => { setShowDetailModal(false); setShowReschedule(false); setDetailError(null); }} className="rounded-lg border border-[#D7DEF2] px-4 py-2.5 text-sm text-[#6B7280] hover:bg-[#F4F5F8] transition-colors">
+        Cerrar
+      </button>
+    </div>
+  );
+})()}
           </div>
         </div>
       )}
