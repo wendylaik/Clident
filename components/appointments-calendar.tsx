@@ -109,7 +109,7 @@ export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
             .from("cita")
             .select("*, paciente(nombre), servicio(nombre, duracion_horas)")
             .eq("id_paciente", paciente.id)
-            .neq("estado", "cancelada");
+            .not("estado", "in", '("cancelada","no_asistio")');
 
             const citasAjenas = (disponibilidad ?? [])
             .filter((d) => !citasPropias?.some((c) => c.id === d.id))
@@ -213,8 +213,8 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     if (date < todayStr) return false;
 
   // Validate clinic hours
-  const day = new Date(`${date}T12:00:00`).getDay(); // use noon to avoid timezone issues
-  if (day === 0) return false; // Sunday
+  const day = new Date(`${date}T12:00:00`).getDay(); 
+  if (day === 0) return false; 
   if (day === 6) {
     if (startMinutes < 10 * 60 || endMinutes > 14 * 60) return false;
   } else {
@@ -242,7 +242,17 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 };
 
     const handleDateClick = (info: { dateStr: string; date: Date }) => {
-    if (!isClinicOpen(info.date)) return;
+        if (role === "patient") {
+  if (info.date < new Date()) return; // no permitir pasado
+  if (!isClinicOpen(info.date)) return; // no permitir fuera de horario
+  setSelectedDate(info.dateStr.split("T")[0]);
+  setSelectedTime(info.dateStr.includes("T") ? info.dateStr.split("T")[1].slice(0, 5) : "08:00");
+  setNewServiceId("");
+  setNewObservaciones("");
+  setNewError(null);
+  setShowNewModal(true);
+  return;
+}
 
     const [datePart, timePart] = info.dateStr.includes("T")
         ? info.dateStr.split("T")
@@ -365,7 +375,14 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const [today] = useState(() => new Date());
 
-    const [minDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [minDate] = useState(() => {
+  const d = new Date();
+  // Go back to Monday of current week
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Monday
+  d.setDate(d.getDate() + diff);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+});
     const [maxDate] = useState(() => {
         
     const date = new Date();
@@ -391,14 +408,21 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
       </div>
 
       {/* Legend */}
-      <div className="flex gap-4 mb-4 flex-wrap">
-        {Object.entries(estadoLabel).map(([key, label]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: estadoColor[key] }} />
-            <span className="text-xs text-[#6B7280]">{label}</span>
-          </div>
-        ))}
+{/* Legend */}
+<div className="flex gap-4 mb-4 flex-wrap">
+  {Object.entries(estadoLabel)
+    .filter(([key]) => 
+      role === "patient" 
+        ? ["programada", "confirmada"].includes(key)
+        : true
+    )
+    .map(([key, label]) => (
+      <div key={key} className="flex items-center gap-1.5">
+        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: estadoColor[key] }} />
+        <span className="text-xs text-[#6B7280]">{label}</span>
       </div>
+    ))}
+</div>
 
       {/* Calendar */}
       {isLoading ? (
@@ -407,22 +431,30 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-[#E2E6F0] p-4 calendar-wrapper">
-          <style>{`
-            .calendar-wrapper .fc-toolbar-title { color: #283A97; font-size: 1.1rem; font-weight: 600; }
-            .calendar-wrapper .fc-button-primary { background-color: #283A97 !important; border-color: #283A97 !important; font-size: 0.8rem; }
-            .calendar-wrapper .fc-button-primary:hover { background-color: #1F2D75 !important; }
-            .calendar-wrapper .fc-button-active { background-color: #1F2D75 !important; }
-            .calendar-wrapper .fc-day-today { background-color: #F1F4FA !important; }
-            .calendar-wrapper .fc-event { cursor: pointer; border-radius: 4px; font-size: 0.75rem; }
-            .calendar-wrapper .fc-col-header-cell { background: #F4F5F8; color: #283A97; font-weight: 500; font-size: 0.8rem; }
-
-            .calendar-wrapper .fc .fc-timegrid-slot-label-cushion {
-                color: #283A97 !important;
-                font-weight: 500;
-            }
-
-            .calendar-wrapper .fc-timegrid-slot-minor { border-top-color: #F1F4FA; }
-            `}</style>
+<style>{`
+  .calendar-wrapper .fc-toolbar-title { color: #283A97; font-size: 1.1rem; font-weight: 600; }
+  .calendar-wrapper .fc-button-primary { background-color: #283A97 !important; border-color: #283A97 !important; font-size: 0.8rem; }
+  .calendar-wrapper .fc-button-primary:hover { background-color: #1F2D75 !important; }
+  .calendar-wrapper .fc-button-active { background-color: #1F2D75 !important; }
+  .calendar-wrapper .fc-day-today { background-color: #F1F4FA !important; }
+  .calendar-wrapper .fc-day-today .fc-daygrid-day-number { color: #283A97 !important; font-weight: 600; }
+  .calendar-wrapper .fc-event { cursor: pointer; border-radius: 4px; font-size: 0.75rem; }
+  .calendar-wrapper .fc-col-header-cell { background: #F4F5F8; color: #283A97; font-weight: 500; font-size: 0.8rem; }
+  .calendar-wrapper .fc-timegrid-slot-minor { border-top-color: #F1F4FA; }
+  .calendar-wrapper .fc-daygrid-day-number { color: #374151 !important; font-weight: 400; }
+  .calendar-wrapper .fc-day-past .fc-daygrid-day-number { color: #9CA3AF !important; }
+  .calendar-wrapper .fc-day-other .fc-daygrid-day-number { color: #D1D5DB !important; }
+  .calendar-wrapper .fc-col-header-cell-cushion { color: #283A97 !important; text-decoration: none; }
+  .calendar-wrapper td, .calendar-wrapper th { border-color: #E2E6F0 !important; }
+  .calendar-wrapper .fc-timegrid-slot-label { color: #6B7280 !important; }
+  .calendar-wrapper .fc-scrollgrid { border-color: #E2E6F0 !important; }
+  .calendar-wrapper .fc-timegrid-col.fc-day-past { background: #F8F9FB !important; }
+  .calendar-wrapper .fc-daygrid-event { color: #ffffff !important; }
+.calendar-wrapper .fc-daygrid-event .fc-event-title { color: #ffffff !important; font-weight: 500; }
+.calendar-wrapper .fc-daygrid-event .fc-event-time { display: none !important; }
+.calendar-wrapper .fc-daygrid-dot-event .fc-event-title { color: #1F2937 !important; }
+.calendar-wrapper .fc-daygrid-dot-event { color: #1F2937 !important; }
+`}</style>
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -451,10 +483,7 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
             allDaySlot={false}
             weekends={true}
             hiddenDays={[0]}
-            validRange={role === "patient" ? {
-              start: minDate,
-              end: maxDate,
-            } : undefined}
+            validRange={role === "patient" ? { start: minDate, end: maxDate } : undefined}
             height="auto"
             businessHours={[
               { daysOfWeek: [1, 2, 3, 4, 5], startTime: "08:00", endTime: "11:30" },

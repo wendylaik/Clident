@@ -2,7 +2,9 @@
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 
 const navItems = [
   {
@@ -116,6 +118,22 @@ export default function DentistLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("usuario")
+        .select("nombre")
+        .eq("id", user.id)
+        .single();
+      if (data) setUserName(data.nombre);
+    };
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -131,14 +149,17 @@ export default function DentistLayout({
   return (
     <div className="flex min-h-screen bg-[#F1F4FA]">
       {/* Sidebar */}
-      <aside className="flex w-60 flex-col justify-between bg-[#F4F5F8] border-r border-[#E2E6F0] py-6 px-4">
+      <aside className="flex h-screen w-60 flex-col justify-between bg-[#F4F5F8] border-r border-[#E2E6F0] py-6 px-4 sticky top-0">
         <div className="flex flex-col gap-6">
           {/* Logo */}
           <div className="flex items-center gap-2 px-2">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="shrink-0">
-              <path d="M12 3C9 3 6.5 4.5 6 7c-.4 2 .3 4 .8 6 .4 1.7.7 4.3 1.7 6.2.4.8 1.6.8 2-.1.5-1.2.8-3 1.5-3 .7 0 1 1.8 1.5 3 .4.9 1.6.9 2 .1 1-1.9 1.3-4.5 1.7-6.2.5-2 1.2-4 .8-6-.5-2.5-3-4-6-4Z" fill="#283A97" />
-              <path d="M9 8c.8-.8 2-1 3-.2.8-.8 2.2-.6 3 .2.8.9.6 2.3-.4 3.2L12 13.5l-2.6-2.3c-1-.9-1.2-2.3-.4-3.2Z" fill="#00C2F3" />
-            </svg>
+            <Image
+              src="/images/logo-clinica.png"
+              alt="Clident"
+              width={45}
+              height={30}
+              className="object-contain"
+            />
             <div>
               <p className="text-sm font-semibold leading-none text-[#283A97]">Clident</p>
               <p className="text-[10px] uppercase tracking-widest text-[#7C86B8]">Clínica Dental</p>
@@ -209,10 +230,23 @@ export default function DentistLayout({
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
-      </main>
+      {/* Right side */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="flex h-14 items-center justify-end border-b border-[#E2E6F0] bg-white px-8 gap-3">
+          <span className="text-sm font-medium text-[#1F2937]">
+            {userName || "..."}
+          </span>
+          <span className="text-xs bg-[#E8EBF7] text-[#283A97] px-2.5 py-1 rounded-full font-medium">
+            Odontólogo
+          </span>
+        </header>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
