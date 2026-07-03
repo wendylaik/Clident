@@ -57,6 +57,7 @@ export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
+  const [showCancelled, setShowCancelled] = useState(false);
   const router = useRouter();
 
   const [showNewModal, setShowNewModal] = useState(false);
@@ -179,6 +180,10 @@ const events = appointments.map((a) => {
   };
 });
 
+const filteredEvents = role === "patient" 
+  ? events 
+  : events.filter((e) => showCancelled || e.extendedProps.appointment?.estado !== "cancelada");
+
   const isClinicOpen = (date: Date): boolean => {
     const day = date.getDay();
     if (day === 0) return false; // Sunday closed
@@ -243,16 +248,19 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     const handleDateClick = (info: { dateStr: string; date: Date }) => {
         if (role === "patient") {
-  if (info.date < new Date()) return; // no permitir pasado
-  if (!isClinicOpen(info.date)) return; // no permitir fuera de horario
-  setSelectedDate(info.dateStr.split("T")[0]);
-  setSelectedTime(info.dateStr.includes("T") ? info.dateStr.split("T")[1].slice(0, 5) : "08:00");
-  setNewServiceId("");
-  setNewObservaciones("");
-  setNewError(null);
-  setShowNewModal(true);
-  return;
-}
+        if (info.date < new Date()) return; // no permitir pasado
+        if (!isClinicOpen(info.date)) return; // no permitir fuera de horario
+        setSelectedDate(info.dateStr.split("T")[0]);
+        setSelectedTime(info.dateStr.includes("T") ? info.dateStr.split("T")[1].slice(0, 5) : "08:00");
+        setNewServiceId("");
+        setNewObservaciones("");
+        setNewError(null);
+        setShowNewModal(true);
+        return;
+        }
+
+        if (info.date < new Date()) return;
+        if (!isClinicOpen(info.date)) return;
 
     const [datePart, timePart] = info.dateStr.includes("T")
         ? info.dateStr.split("T")
@@ -407,22 +415,38 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         
       </div>
 
+
+                {role !== "patient" && (
+                <div className="flex items-center gap-3 mb-4">
+                    <button
+                    onClick={() => setShowCancelled((v) => !v)}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        showCancelled
+                        ? "border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]"
+                        : "border-[#D7DEF2] bg-white text-[#6B7280] hover:border-[#DC2626] hover:text-[#DC2626]"
+                    }`}
+                    >
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />
+                    {showCancelled ? "Ocultar canceladas" : "Mostrar canceladas"}
+                    </button>
+                </div>
+                )}
+
       {/* Legend */}
-{/* Legend */}
-<div className="flex gap-4 mb-4 flex-wrap">
-  {Object.entries(estadoLabel)
-    .filter(([key]) => 
-      role === "patient" 
-        ? ["programada", "confirmada"].includes(key)
-        : true
-    )
-    .map(([key, label]) => (
-      <div key={key} className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: estadoColor[key] }} />
-        <span className="text-xs text-[#6B7280]">{label}</span>
-      </div>
-    ))}
-</div>
+        <div className="flex gap-4 mb-4 flex-wrap">
+        {Object.entries(estadoLabel)
+            .filter(([key]) => 
+            role === "patient" 
+                ? ["programada", "confirmada"].includes(key)
+                : true
+            )
+            .map(([key, label]) => (
+            <div key={key} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: estadoColor[key] }} />
+                <span className="text-xs text-[#6B7280]">{label}</span>
+            </div>
+            ))}
+        </div>
 
       {/* Calendar */}
       {isLoading ? (
@@ -474,7 +498,7 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
               week: "Semana",
             }}
             locale="es"
-            events={events}
+            events={filteredEvents}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             slotMinTime="07:00:00"
@@ -528,27 +552,27 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Fecha</label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    min={minDate}
-                    max={maxDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Hora</label>
-                  <input
-                    type="time"
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
+  <div className="flex flex-col gap-1.5">
+    <label className={labelClass}>Fecha</label>
+    <input
+      type="date"
+      value={selectedDate}
+      readOnly={role === "patient"}
+      onChange={(e) => role !== "patient" && setSelectedDate(e.target.value)}
+      className={`${inputClass} ${role === "patient" ? "bg-[#F4F5F8] cursor-not-allowed" : ""}`}
+    />
+  </div>
+  <div className="flex flex-col gap-1.5">
+    <label className={labelClass}>Hora</label>
+    <input
+      type="time"
+      value={selectedTime}
+      readOnly={role === "patient"}
+      onChange={(e) => role !== "patient" && setSelectedTime(e.target.value)}
+      className={`${inputClass} ${role === "patient" ? "bg-[#F4F5F8] cursor-not-allowed" : ""}`}
+    />
+  </div>
+</div>
 
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Observaciones <span className="text-[#9CA3AF] font-normal">(opcional)</span></label>
@@ -674,42 +698,47 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
               {/* Admin/dentist actions */}
             {role !== "patient" && (
-            <>
-                {["programada", "confirmada"].includes(selectedAppointment.estado) && (
-                <div className="flex flex-col gap-2">
-                    <button
-                    onClick={() => {
-                        router.push(`${role === "admin" ? "/admin" : "/dentist"}/consultations/new?citaId=${selectedAppointment.id}`);
-                        setShowDetailModal(false);
-                    }}
-                    className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] transition-colors"
-                    >
-                    Iniciar consulta
-                    </button>
-                    <button
-                    onClick={() => handleMarkAttendance(false)}
-                    disabled={detailLoading}
-                    className="rounded-lg bg-[#E45C3C] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#C94A2A] disabled:opacity-60 transition-colors"
-                    >
-                    No asistió
-                    </button>
-                    <button
-                    onClick={() => { setShowReschedule(!showReschedule); setDetailError(null); }}
-                    className="rounded-lg border border-[#D7DEF2] text-[#283A97] px-4 py-2.5 text-sm font-medium hover:bg-[#E8EBF7] transition-colors"
-                    >
-                    {showReschedule ? "Cancelar reprogramación" : "Reprogramar"}
-                    </button>
-                    <button
-                    onClick={handleCancelAppointment}
-                    disabled={detailLoading}
-                    className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors"
-                    >
-                    Cancelar cita
-                    </button>
-                </div>
-                )}
-            </>
-            )}
+  <>
+    {["programada", "confirmada"].includes(selectedAppointment.estado) && (
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => { setShowReschedule(!showReschedule); setDetailError(null); }}
+          className="rounded-lg border border-[#D7DEF2] text-[#283A97] px-4 py-2.5 text-sm font-medium hover:bg-[#E8EBF7] transition-colors"
+        >
+          {showReschedule ? "Cancelar reprogramación" : "Reprogramar"}
+        </button>
+
+        {!showReschedule && (
+          <>
+            <button
+              onClick={() => {
+                router.push(`${role === "admin" ? "/admin" : "/dentist"}/consultations/new?citaId=${selectedAppointment.id}`);
+                setShowDetailModal(false);
+              }}
+              className="rounded-lg bg-[#059669] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#047857] transition-colors"
+            >
+              Iniciar consulta
+            </button>
+            <button
+              onClick={() => handleMarkAttendance(false)}
+              disabled={detailLoading}
+              className="rounded-lg bg-[#E45C3C] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#C94A2A] disabled:opacity-60 transition-colors"
+            >
+              No asistió
+            </button>
+            <button
+              onClick={handleCancelAppointment}
+              disabled={detailLoading}
+              className="rounded-lg border border-[#FECACA] text-[#DC2626] px-4 py-2.5 text-sm font-medium hover:bg-[#FEF2F2] disabled:opacity-60 transition-colors"
+            >
+              Cancelar cita
+            </button>
+          </>
+        )}
+      </div>
+    )}
+  </>
+)}
 
               <button onClick={() => { setShowDetailModal(false); setShowReschedule(false); setDetailError(null); }} className="rounded-lg border border-[#D7DEF2] px-4 py-2.5 text-sm text-[#6B7280] hover:bg-[#F4F5F8] transition-colors">
                 Cerrar
