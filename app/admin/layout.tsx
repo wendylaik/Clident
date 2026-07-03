@@ -59,7 +59,7 @@ const navItems = [
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
       </svg>
     ),
-    enabled: true,
+    enabled: false,
   },
   {
     label: "Expedientes",
@@ -253,7 +253,6 @@ export default function AdminLayout({
           </span>
         </header>
 
-        {/* Main content */}
         <main className="flex-1 overflow-y-auto p-8">
           {children}
         </main>
