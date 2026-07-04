@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+const today = new Date();
+const MAX_BIRTH_DATE = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
 export function SignUpForm() {
   const [fullName, setFullName] = useState("");
@@ -19,6 +21,8 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  
+ 
   const router = useRouter();
 
   useEffect(() => {
@@ -62,7 +66,7 @@ export function SignUpForm() {
     }
 
     const birth = new Date(birthDate);
-    const today = new Date();
+    const today = new Date(MAX_BIRTH_DATE);
     const age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     const realAge =
@@ -137,7 +141,6 @@ export function SignUpForm() {
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-[#F1F4FA] p-6">
       <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-sm">
-        {/* Left panel */}
         <div
           className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-10 text-white md:flex"
           style={{
@@ -182,7 +185,6 @@ export function SignUpForm() {
           </p>
         </div>
 
-        {/* Right panel */}
         <div className="flex w-full flex-col justify-center p-8 md:w-1/2 md:p-12">
           <h2 className="font-[var(--font-display)] text-2xl text-[#283A97]">
             Crear cuenta nueva
@@ -194,7 +196,6 @@ export function SignUpForm() {
           <form onSubmit={handleSignUp} className="mt-6 flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
 
-              {/* Nombre completo */}
               <div className="col-span-2 flex flex-col gap-1.5">
                 <label htmlFor="full-name" className={labelClass}>
                   Nombre completo
@@ -213,7 +214,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Cédula */}
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Identificación</label>
                 <div className="flex overflow-hidden rounded-lg border border-[#D7DEF2] mb-1">
@@ -263,6 +263,7 @@ export function SignUpForm() {
                   id="birth-date"
                   type="date"
                   required
+                  max={MAX_BIRTH_DATE}
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
                   className={fieldErrors.birthDate ? inputErrorClass : inputClass}
@@ -272,7 +273,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Teléfono */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="phone" className={labelClass}>
                   Teléfono
@@ -291,7 +291,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Correo */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="email" className={labelClass}>
                   Correo electrónico
@@ -310,7 +309,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Contraseña */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="password" className={labelClass}>
                   Contraseña
@@ -337,7 +335,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Confirmar contraseña */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="repeat-password" className={labelClass}>
                   Confirmar contraseña

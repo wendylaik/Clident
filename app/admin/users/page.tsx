@@ -55,14 +55,12 @@ export default function AdminUsersPage() {
   const [filterEstado, setFilterEstado] = useState<FilterEstado>("todos");
   const [page, setPage] = useState(1);
 
-  // Edit modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [newCorreo, setNewCorreo] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
-  // Add modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState<NewUser>({
     nombre: "", correo: "", password: "", rol: "odontologo",
@@ -121,9 +119,18 @@ export default function AdminUsersPage() {
       setEditError("Este correo ya está asociado a otro usuario.");
       return;
     }
-    setEditLoading(true);
-    const supabase = createClient();
-    await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.id);
+setEditLoading(true);
+const supabase = createClient();
+await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.id);
+setShowEditModal(false);
+setEditUser(null);
+setEditError(null);
+fetchUsers();
+setEditLoading(false);
+
+
+
+await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.id);
     setShowEditModal(false);
     setEditUser(null);
     setEditError(null);

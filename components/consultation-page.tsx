@@ -172,8 +172,15 @@ useEffect(() => {
 
   const handleCloseConsultation = async () => {
     if (!citaId) return;
+    
+    if (!diagnostico.trim()) {
+        setSaveError("Debe ingresar al menos el diagnóstico antes de cerrar la consulta.");
+        return;
+    }
+
     setSaveError(null);
     setIsSaving(true);
+    
     const supabase = createClient();
 
     // Get expediente id
@@ -277,7 +284,6 @@ useEffect(() => {
       )}
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Left: Odontogram */}
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-xl border border-[#E2E6F0] p-5">
             <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">
@@ -296,7 +302,6 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Selected tooth panel */}
           {selectedPieza && (
             <div className="bg-white rounded-xl border border-[#00C2F3] p-5">
               <div className="flex items-center justify-between mb-4">

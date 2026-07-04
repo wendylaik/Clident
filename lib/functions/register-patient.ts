@@ -35,43 +35,24 @@ export async function registerPatient({
     return { success: false, error: "Ya existe un paciente registrado con esa cédula" };
   }
 
-  // Create the user in Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { rol: "paciente" },
-    },
+  const response = await fetch("/api/create-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nombre: fullName,
+      correo: email,
+      password,
+      rol: "paciente",
+      cedula,
+      birthDate,
+      phone,
+    }),
   });
 
-  if (authError || !authData.user) {
-    return {
-      success: false,
-      error: authError?.message ?? "No se pudo crear el usuario",
-    };
+  const data = await response.json();
+  if (!response.ok) {
+    return { success: false, error: data.error ?? "No se pudo crear el usuario" };
   }
-
-  const userId = authData.user.id;
-
-  // Call the Postgres function that creates everything else atomically
-  const { error: rpcError } = await supabase.rpc("crear_paciente_completo", {
-    p_id_usuario: userId,
-    p_nombre: fullName,
-    p_cedula: cedula,
-    p_fecha_nacimiento: birthDate,
-    p_telefono: phone,
-    p_correo: email,
-  });
-
-  if (rpcError) {
-    if (rpcError.message.includes("duplicate key") || rpcError.code === "23505") {
-      return { success: false, error: "Ya existe un paciente registrado con esa cédula" };
-    }
-    return { success: false, error: rpcError.message };
-  }
-
-  // Sign out immediately so the user logs in manually
-  await supabase.auth.signOut();
 
   return { success: true };
 }
