@@ -6,6 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 
+/**
+ * Formulario de inicio de sesión del sistema Clident.
+ * Autentica al usuario con Supabase Auth, verifica que su cuenta esté activa
+ * y redirige al dashboard correspondiente según su rol.
+ * Muestra mensajes informativos si el usuario llegó desde el registro
+ * o desde la recuperación de contraseña.
+ */
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +24,13 @@ export function LoginForm() {
   const justRegistered = searchParams.get("registrado") === "true";
   const passwordUpdated = searchParams.get("contrasena") === "actualizada";
 
+/**
+ * Maneja el inicio de sesión del usuario.
+ * Verifica credenciales, valida que la cuenta esté activa y redirige
+ * al dashboard del rol correspondiente: /admin, /dentist o /patient.
+ * Si la cuenta está desactivada o el rol no es reconocido, cierra la sesión
+ * y muestra un mensaje de error.
+ */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const supabase = createClient();
@@ -63,7 +77,6 @@ export function LoginForm() {
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-[#F1F4FA] p-6">
       <div className="flex w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-sm">
-        {/* Left panel — brand presence */}
         <div className="hidden w-1/2 flex-col justify-between bg-[#F4F5F8] p-10 md:flex">
           <div>
             <div className="flex items-center gap-2">
@@ -102,7 +115,6 @@ export function LoginForm() {
           </div>
         </div>
 
-        {/* Right panel — form */}
         <div className="flex w-full flex-col justify-center p-8 md:w-1/2 md:p-12">
           <h2 className="font-[var(--font-display)] text-2xl text-[#283A97]">
             Iniciar sesión

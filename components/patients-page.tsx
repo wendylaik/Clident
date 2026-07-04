@@ -18,16 +18,34 @@ type SearchCriteria = "nombre" | "cedula" | "correo" | "expediente";
 
 const ITEMS_PER_PAGE = 8;
 
+/**
+ * Genera las iniciales de un nombre para mostrar en el avatar.
+ * @param name - Nombre completo del paciente
+ * @returns Hasta 2 iniciales en mayúscula
+ */
 function getInitials(name: string) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 }
 
+/** Paleta de colores para los avatares generados automáticamente. */
 const avatarColors = ["bg-[#283A97]", "bg-[#00838F]", "bg-[#E45C3C]", "bg-[#7C3AED]", "bg-[#059669]"];
 
+/**
+ * Asigna un color de avatar determinístico basado en la primera letra del nombre.
+ * @param name - Nombre del paciente
+ * @returns Clase de Tailwind con el color de fondo
+ */
 function getAvatarColor(name: string) {
   return avatarColors[name.charCodeAt(0) % avatarColors.length];
 }
 
+/**
+ * Página de listado y gestión de pacientes. Reutilizable para admin y odontólogo.
+ * Permite buscar por nombre, cédula, correo o número de expediente,
+ * filtrar por estado y paginar los resultados.
+ *
+ * @param basePath - Ruta base del rol actual (/admin/patients o /dentist/patients)
+ */
 export default function PatientsPage({ basePath }: { basePath: string }) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +56,10 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const router = useRouter();
 
+/**
+ * Carga todos los pacientes con sus datos básicos y número de expediente
+ * ordenados por nombre.
+ */
   const fetchPatients = async () => {
     const supabase = createClient();
     const { data } = await supabase
@@ -50,6 +72,10 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
 
   useEffect(() => { fetchPatients(); }, []);
 
+/**
+ * Filtra los pacientes según el criterio de búsqueda seleccionado y el filtro de estado.
+ * Soporta búsqueda por nombre, cédula, correo y número de expediente clínico.
+ */
   const filtered = patients.filter((p) => {
     const matchEstado =
       filterEstado === "todos" ||
@@ -76,12 +102,17 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
+/**
+ * Activa o desactiva un paciente con validaciones previas.
+ * Para desactivar: verifica que no tenga citas pendientes.
+ * Para reactivar: verifica que no exista otro paciente activo con la misma cédula.
+ * @param patient - Paciente a activar o desactivar
+ */
   const handleToggleActive = async (patient: Patient) => {
     setActionError(null);
     const supabase = createClient();
 
     if (patient.es_activo) {
-      // Check for pending appointments before deactivating
       const { data: citas } = await supabase
         .from("cita")
         .select("id")
@@ -93,7 +124,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
         return;
       }
     } else {
-      // Check for duplicate cedula before reactivating
       const { data: duplicate } = await supabase
         .from("paciente")
         .select("id")
@@ -118,7 +148,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-[#283A97]">Pacientes</h1>
@@ -136,7 +165,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
         </button>
       </div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: "Total pacientes", value: patients.length },
@@ -150,7 +178,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
         ))}
       </div>
 
-      {/* Action error */}
       {actionError && (
         <div className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-sm text-[#DC2626]">
           {actionError}
@@ -158,7 +185,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <div className="flex rounded-lg border border-[#D7DEF2] overflow-hidden bg-white">
           <select
@@ -195,7 +221,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
         </select>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl border border-[#E2E6F0] overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
@@ -235,7 +260,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
-                      {/* View detail */}
                       <button
                         onClick={() => router.push(`${basePath}/${patient.id}`)}
                         title="Ver perfil"
@@ -246,7 +270,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
-                      {/* Edit */}
                         <button
                         onClick={() => router.push(`${basePath}/${patient.id}`)}
                         title="Editar"
@@ -257,7 +280,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
                       </button>
-                      {/* Toggle active */}
                       <button
                         onClick={() => handleToggleActive(patient)}
                         title={patient.es_activo ? "Desactivar" : "Activar"}
@@ -281,7 +303,6 @@ export default function PatientsPage({ basePath }: { basePath: string }) {
           </table>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#E2E6F0]">
             <p className="text-xs text-[#6B7280]">

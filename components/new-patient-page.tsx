@@ -6,6 +6,15 @@ import { useState } from "react";
 
 type FieldErrors = Record<string, string>;
 
+/**
+ * Página de registro de nuevos pacientes por parte de admin u odontólogo.
+ * Verifica duplicados de cédula y correo antes de insertar, luego llama
+ * a la función PostgreSQL crear_expediente_y_odontograma para generar
+ * automáticamente el expediente y las 32 piezas dentales del paciente.
+ * Al finalizar redirige al perfil del paciente recién creado.
+ *
+ * @param basePath - Ruta base del rol actual (/admin/patients o /dentist/patients)
+ */
 export default function NewPatientPage({ basePath }: { basePath: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +32,11 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
   const [alergias, setAlergias] = useState("");
   const [enfermedades, setEnfermedades] = useState("");
 
+/**
+ * Valida los campos del formulario de registro de paciente.
+ * Aplica reglas diferentes para cédula y teléfono según el tipo de documento.
+ * @returns Objeto con los errores por campo. Vacío si no hay errores.
+ */
   const validate = (): FieldErrors => {
     const errors: FieldErrors = {};
 
@@ -62,6 +76,11 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
     return errors;
   };
 
+/**
+ * Maneja el envío del formulario de registro.
+ * Valida campos, verifica duplicados de cédula y correo,
+ * inserta el paciente y genera su expediente y odontograma via RPC.
+ */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -76,7 +95,7 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
 
     const supabase = createClient();
 
-    // Check duplicate cedula
+// Verificar que la cédula no esté en uso por otro paciente
     const { data: existingCedula } = await supabase
       .from("paciente")
       .select("id")
@@ -89,7 +108,7 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
       return;
     }
 
-    // Check duplicate correo
+// Verificar que el correo no esté en uso si fue proporcionado
     if (correo) {
       const { data: existingCorreo } = await supabase
         .from("paciente")
@@ -104,7 +123,7 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
       }
     }
 
-    // Insert patient
+// Insertar el paciente y luego crear su expediente y odontograma de forma atómica
     const { data: pacienteData, error: pacienteError } = await supabase
       .from("paciente")
       .insert({
@@ -147,7 +166,6 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
 
   return (
     <div className="max-w-3xl">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.back()}
@@ -165,7 +183,6 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-        {/* Personal data */}
         <div className="bg-white rounded-xl border border-[#E2E6F0] p-6">
           <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">Datos personales</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -217,7 +234,6 @@ export default function NewPatientPage({ basePath }: { basePath: string }) {
           </div>
         </div>
 
-        {/* Medical background */}
         <div className="bg-white rounded-xl border border-[#E2E6F0] p-6">
           <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">Antecedentes médicos</h2>
           <div className="flex flex-col gap-4">

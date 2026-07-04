@@ -3,14 +3,38 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sealData } from "iron-session";
 
+/**
+ * Cliente de Resend inicializado con la API key del entorno.
+ * Se usa exclusivamente para el envío de correos de recuperación de contraseña.
+ */
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const SESSION_PASSWORD = process.env.SESSION_SECRET!;
 
+/**
+ * Genera un código OTP (One-Time Password) numérico de 6 dígitos.
+ * @returns String de 6 dígitos entre 100000 y 999999
+ */
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+
+/**
+ * Endpoint para el paso 1 del proceso de recuperación de contraseña.
+ * 
+ * Genera un código OTP de 6 dígitos, lo cifra junto con el correo y
+ * la fecha de expiración usando iron-session, y lo almacena en una
+ * cookie httpOnly para verificación posterior. Luego envía el código
+ * al correo del usuario mediante Resend.
+ *
+ * Nota: En el plan gratuito de Resend sin dominio verificado, los correos
+ * solo se envían a la dirección autorizada (wendypt2004@gmail.com).
+ * En producción con dominio verificado, se enviará al correo del usuario.
+ *
+ * @param request - Request con body JSON: { email: string }
+ * @returns JSON con { success: true } o { error: string }
+ */
 export async function POST(request: Request) {
   try {
     const { email } = await request.json();
@@ -25,7 +49,8 @@ export async function POST(request: Request) {
     const code = generateOTP();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Encrypt and store the code in a cookie
+// Cifrar el código, correo y expiración con iron-session y almacenar en cookie httpOnly
+// La cookie expira en 600 segundos (10 minutos), igual que el código OTP
     const sealed = await sealData(
       { code, email, expiresAt },
       { password: SESSION_PASSWORD, ttl: 600 }
@@ -40,10 +65,10 @@ export async function POST(request: Request) {
       path: "/",
     });
 
-    // Send the email with Resend
+// Enviar el correo con el código OTP mediante la API de Resend
     const { error: resendError } = await resend.emails.send({
       from: "Clident <onboarding@resend.dev>",
-      to: "wendypt2004@gmail.com", // TODO: cambiar a `email` en producción con dominio verificado
+      to: "wendypt2004@gmail.com", //cambiar a `email` en producción cuando se tenga dominio verificado
       subject: "Código de recuperación — Clínica Dental Maureen Téllez",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #ffffff;">

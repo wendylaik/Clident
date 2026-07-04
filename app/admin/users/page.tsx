@@ -185,7 +185,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-[#283A97]">Usuarios</h1>
@@ -203,7 +202,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
         </button>
       </div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: "Total usuarios", value: users.length },
@@ -217,7 +215,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <input
           type="text"
@@ -247,7 +244,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
         </select>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl border border-[#E2E6F0] overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
@@ -323,7 +319,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
           </table>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#E2E6F0]">
             <p className="text-xs text-[#6B7280]">
@@ -344,7 +339,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
         )}
       </div>
 
-      {/* Edit email modal */}
       {showEditModal && editUser && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
@@ -365,7 +359,6 @@ await supabase.from("usuario").update({ correo: newCorreo }).eq("id", editUser.i
         </div>
       )}
 
-      {/* Add user modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">

@@ -2,6 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
+
+/**
+ * Middleware de autenticación y autorización del sistema Clident.
+ *
+ * Intercepta cada petición HTTP para:
+ * 1. Verificar si el usuario tiene una sesión activa mediante el JWT de Supabase.
+ * 2. Redirigir a login si intenta acceder a rutas protegidas sin sesión.
+ * 3. Leer el rol del usuario desde app_metadata del JWT sin consultar la base de datos.
+ * 4. Redirigir al dashboard correspondiente si un usuario autenticado accede a rutas públicas.
+ * 5. Bloquear el acceso cruzado entre roles.
+ *
+ * @param request - Objeto NextRequest con la información de la petición entrante
+ * @returns NextResponse con la respuesta apropiada: continuar, redirigir o bloquear
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,7 +53,11 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Public routes that don't require authentication
+/**
+ * Rutas públicas accesibles sin autenticación.
+ * Las rutas /api/ se incluyen para permitir el acceso a los endpoints
+ * de creación de usuarios y recuperación de contraseña.
+ */
   const publicRoutes = [
     "/auth/login",
     "/auth/sign-up",
@@ -55,18 +73,20 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // If no session and trying to access a protected route → redirect to login
   if (!user && !isPublicRoute && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
-  // If session exists, read role from JWT app_metadata (no DB query needed)
+/**
+ * El rol se lee desde app_metadata del JWT sin consultar la base de datos.
+ * Es más seguro que user_metadata porque solo puede ser modificado
+ * desde el servidor con la service role key.
+ */
   if (user) {
     const rol = user.app_metadata?.rol as string | undefined;
 
-    // If logged in and trying to access a public route → redirect to their dashboard
     if (isPublicRoute && pathname !== "/auth/update-password") {
       if (rol === "administrador") {
         return NextResponse.redirect(new URL("/admin", request.url));
@@ -80,7 +100,6 @@ export async function updateSession(request: NextRequest) {
       console.log("rol detectado:", rol);}
     }
 
-    // Block cross-role access
     if (pathname.startsWith("/admin") && rol !== "administrador") {
       return NextResponse.redirect(new URL("/auth/login", request.url));
     }

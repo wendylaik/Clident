@@ -13,6 +13,7 @@ type TodayAppointment = {
   servicio: { nombre: string } | { nombre: string }[] | null;
 };
 
+/** Mapa de colores por estado de cita para los badges del listado de citas de hoy. */
 const estadoColor: Record<string, string> = {
   programada: "#283A97",
   confirmada: "#059669",
@@ -21,6 +22,7 @@ const estadoColor: Record<string, string> = {
   no_asistio: "#E45C3C",
 };
 
+/** Mapa de etiquetas legibles por estado de cita. */
 const estadoLabel: Record<string, string> = {
   programada: "Programada",
   confirmada: "Confirmada",
@@ -29,11 +31,21 @@ const estadoLabel: Record<string, string> = {
   no_asistio: "No asistió",
 };
 
+/**
+ * Extrae el nombre de un campo que puede ser objeto o array según el join de Supabase.
+ * @param val - Objeto con nombre, array de objetos con nombre, o null
+ * @returns Nombre como string o "—" si no existe
+ */
 function getName(val: { nombre: string } | { nombre: string }[] | null): string {
   if (!val) return "—";
   return Array.isArray(val) ? val[0]?.nombre ?? "—" : val.nombre;
 }
 
+/**
+ * Dashboard del administrador. Muestra un resumen de la actividad del sistema:
+ * métricas de pacientes activos, citas del día y usuarios activos,
+ * lista de citas programadas para hoy y accesos rápidos a las secciones más usadas.
+ */
 export default function AdminDashboard() {
   const [adminName, setAdminName] = useState("");
   const [totalPatients, setTotalPatients] = useState(0);
@@ -42,6 +54,10 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+/**
+ * Carga los datos del dashboard: nombre del administrador, conteo de pacientes activos,
+ * conteo de usuarios activos y lista de citas del día (excluyendo canceladas).
+ */
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();
@@ -97,7 +113,6 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-4xl flex flex-col gap-6">
 
-      {/* Hero banner */}
       <div className="rounded-2xl bg-[#283A97] px-8 py-8 text-white relative overflow-hidden">
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
         <div className="absolute top-4 right-16 w-20 h-20 rounded-full bg-[#00C2F3]/20" />
@@ -109,7 +124,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-3 gap-4">
         {[
           {
@@ -165,7 +179,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-6">
-        {/* Today's appointments */}
         <div>
           <h2 className="text-xs font-semibold text-[#283A97] uppercase tracking-widest mb-3">
             Citas de hoy
@@ -205,7 +218,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick access */}
         <div>
           <h2 className="text-xs font-semibold text-[#283A97] uppercase tracking-widest mb-3">
             Accesos rápidos

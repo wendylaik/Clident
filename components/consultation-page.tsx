@@ -23,6 +23,7 @@ type Cita = {
   servicio: { nombre: string } | null;
 };
 
+/** Etiquetas legibles para cada estado de pieza dental. */
 const estadoLabel: Record<EstadoPieza, string> = {
   sana: "Sana",
   caries: "Caries",
@@ -33,6 +34,7 @@ const estadoLabel: Record<EstadoPieza, string> = {
   endodoncia: "Endodoncia",
 };
 
+/** Colores de representación clínica estándar para cada estado de pieza dental. */
 const estadoColor: Record<EstadoPieza, string> = {
   sana: "#6B7280",
   caries: "#DC2626",
@@ -43,6 +45,11 @@ const estadoColor: Record<EstadoPieza, string> = {
   endodoncia: "#E45C3C",
 };
 
+/**
+ * Mapa de conversión de posición interna (1-32) a numeración FDI internacional (11-48).
+ * La base de datos almacena las piezas del 1 al 32, pero el odontograma SVG
+ * usa la numeración FDI estándar utilizada en odontología.
+ */
 const POSITION_TO_FDI: Record<number, number> = {
   1:18, 2:17, 3:16, 4:15, 5:14, 6:13, 7:12, 8:11,
   9:21, 10:22, 11:23, 12:24, 13:25, 14:26, 15:27, 16:28,
@@ -50,6 +57,17 @@ const POSITION_TO_FDI: Record<number, number> = {
   25:41, 26:42, 27:43, 28:44, 29:45, 30:46, 31:47, 32:48,
 };
 
+/**
+ * Página de consulta clínica. Accesible únicamente desde el modal de detalle
+ * de una cita mediante el botón "Iniciar consulta".
+ *
+ * Permite al odontólogo:
+ * - Ver y actualizar el odontograma interactivo del paciente
+ * - Registrar diagnóstico, observaciones y evolución
+ * - Cerrar la consulta, lo que guarda los datos clínicos y marca la cita como completada
+ *
+ * @param basePath - Ruta base del rol actual (/admin/consultations o /dentist/consultations)
+ */
 export default function ConsultationPage({ basePath }: { basePath: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,22 +77,20 @@ export default function ConsultationPage({ basePath }: { basePath: string }) {
   const [piezas, setPiezas] = useState<PiezaDental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Consulta fields
   const [diagnostico, setDiagnostico] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [evolucion, setEvolucion] = useState("");
 
-  // Selected tooth
   const [selectedPieza, setSelectedPieza] = useState<PiezaDental | null>(null);
   const [newEstado, setNewEstado] = useState<EstadoPieza>("sana");
   const [newObservaciones, setNewObservaciones] = useState("");
   const [savingPieza, setSavingPieza] = useState(false);
 
-  // Save/close
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
+/** Reinicia todos los campos del formulario cuando cambia la cita activa. */
+useEffect(() => {
   setIsSaving(false);
   setSaveError(null);
   setDiagnostico("");
@@ -83,12 +99,16 @@ export default function ConsultationPage({ basePath }: { basePath: string }) {
   setSelectedPieza(null);
 }, [citaId]);
 
+/**
+ * Carga los datos de la consulta: información de la cita, expediente clínico,
+ * odontograma y las 32 piezas dentales del paciente.
+ * Se ejecuta cada vez que cambia el citaId en la URL.
+ */
 useEffect(() => {
   if (!citaId) return;
   const fetchData = async () => {
     const supabase = createClient();
 
-    // 1. Traer la cita
     const { data: citaData } = await supabase
       .from("cita")
       .select("id, fecha, hora, id_paciente, id_servicio, paciente(id, nombre), servicio(nombre)")
@@ -102,7 +122,6 @@ useEffect(() => {
 
     setCita(citaData as any);
 
-    // 2. Traer expediente del paciente
     const { data: expediente } = await supabase
       .from("expediente_clinico")
       .select("id")
@@ -114,7 +133,6 @@ useEffect(() => {
       return;
     }
 
-    // 3. Traer odontograma
     const { data: odontograma } = await supabase
       .from("odontograma")
       .select("id")
@@ -126,7 +144,6 @@ useEffect(() => {
       return;
     }
 
-    // 4. Traer piezas
     const { data: piezasData } = await supabase
       .from("pieza_dental")
       .select("id, numero_pieza, estado, observaciones")
@@ -140,12 +157,21 @@ useEffect(() => {
   fetchData();
 }, [citaId]);
 
+/**
+ * Abre el panel de edición para una pieza dental seleccionada en el odontograma.
+ * Precarga el estado y observaciones actuales de la pieza.
+ * @param pieza - Pieza dental seleccionada
+ */
   const handlePiezaClick = (pieza: PiezaDental) => {
     setSelectedPieza(pieza);
     setNewEstado(pieza.estado);
     setNewObservaciones(pieza.observaciones ?? "");
   };
 
+/**
+ * Guarda el nuevo estado y observaciones de una pieza dental en la base de datos.
+ * Actualiza el estado local para reflejar el cambio sin recargar todas las piezas.
+ */
   const handleSavePieza = async () => {
     if (!selectedPieza) return;
     setSavingPieza(true);
@@ -170,6 +196,12 @@ useEffect(() => {
     setSavingPieza(false);
   };
 
+/**
+ * Cierra la consulta clínica guardando todos los datos registrados.
+ * Requiere al menos el diagnóstico para poder cerrar.
+ * Inserta un registro en la tabla consulta y actualiza el estado de la cita a "completada".
+ * Al finalizar redirige al calendario de citas del rol correspondiente.
+ */
   const handleCloseConsultation = async () => {
     if (!citaId) return;
     
@@ -183,7 +215,6 @@ useEffect(() => {
     
     const supabase = createClient();
 
-    // Get expediente id
     const { data: pacienteData } = await supabase
       .from("cita")
       .select("id_paciente")
@@ -196,7 +227,6 @@ useEffect(() => {
       .eq("id_paciente", pacienteData?.id_paciente)
       .single();
 
-    // Create consulta
     const { error: consultaError } = await supabase.from("consulta").insert({
       id_cita: citaId,
       id_expediente: expediente?.id,
@@ -215,7 +245,6 @@ useEffect(() => {
       return;
     }
 
-    // Mark cita as completada
     await supabase.from("cita").update({ estado: "completada" }).eq("id", citaId);
 
     router.push(`${basePath.replace("/consultations", "/appointments")}`);
@@ -247,7 +276,6 @@ useEffect(() => {
 
   return (
     <div className="max-w-6xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
@@ -302,6 +330,9 @@ useEffect(() => {
             )}
           </div>
 
+{/* Panel de edición de pieza dental. Se muestra cuando el odontólogo
+    selecciona una pieza en el odontograma. Muestra el número FDI,
+    el estado actual y permite seleccionar un nuevo estado. */}
           {selectedPieza && (
             <div className="bg-white rounded-xl border border-[#00C2F3] p-5">
               <div className="flex items-center justify-between mb-4">
@@ -367,7 +398,8 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Right: Clinical fields */}
+{/* Columna derecha: campos clínicos de la consulta.
+    El diagnóstico es requerido para poder cerrar la consulta. */}
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-xl border border-[#E2E6F0] p-5">
             <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">

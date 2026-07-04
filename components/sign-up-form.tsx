@@ -5,9 +5,28 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+
+/**
+ * Fecha máxima permitida para el campo de fecha de nacimiento.
+ * Se calcula fuera del componente para evitar el error de Next.js
+ * que prohíbe usar new Date() directamente en Client Components durante el pre-render.
+ */
 const today = new Date();
 const MAX_BIRTH_DATE = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
+/**
+ * Formulario de registro público para nuevos pacientes.
+ * Valida todos los campos antes de llamar a registerPatient, que delega
+ * la creación al endpoint /api/create-user para garantizar que el rol
+ * quede asignado correctamente en app_metadata del JWT.
+ *
+ * Validaciones incluidas:
+ * - Cédula: 9 dígitos para nacionales, formato libre para extranjeros
+ * - Teléfono: 8 dígitos para nacionales, código de país para extranjeros
+ * - Edad mínima: 18 años
+ * - Correo: formato válido
+ * - Contraseña: mínimo 8 caracteres, mayúscula, minúscula y número
+ */
 export function SignUpForm() {
   const [fullName, setFullName] = useState("");
   const [documentType, setDocumentType] = useState<"nacional" | "extranjero">("nacional");
@@ -25,6 +44,7 @@ export function SignUpForm() {
  
   const router = useRouter();
 
+/** Reinicia todos los campos del formulario al montar el componente. */
   useEffect(() => {
     setFullName("");
     setDocumentType("nacional");
@@ -100,6 +120,11 @@ export function SignUpForm() {
     return errors;
   };
 
+/**
+ * Maneja el envío del formulario de registro.
+ * Valida los campos, llama a registerPatient y redirige al login
+ * con un parámetro de confirmación al completarse exitosamente.
+ */
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -254,7 +279,6 @@ export function SignUpForm() {
                 )}
               </div>
 
-              {/* Fecha de nacimiento */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="birth-date" className={labelClass}>
                   Fecha de nacimiento

@@ -4,6 +4,17 @@ import { unsealData } from "iron-session";
 
 const SESSION_PASSWORD = process.env.SESSION_SECRET!;
 
+/**
+ * Endpoint para el paso 2 del proceso de recuperación de contraseña.
+ *
+ * Verifica el código OTP ingresado por el usuario contra el almacenado
+ * en la cookie cifrada recovery_session. Si el código es válido y no ha expirado,
+ * elimina la cookie de sesión y crea una nueva cookie recovery_verified
+ * que autoriza al usuario a actualizar su contraseña en el paso siguiente.
+ *
+ * @param request - Request con body JSON: { code: string }
+ * @returns JSON con { success: true, email: string } o { error: string }
+ */
 export async function POST(request: Request) {
   try {
     const { code } = await request.json();
@@ -46,7 +57,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Code is valid — store verified state in cookie so update-password page knows it's allowed
+// Código válido: crear cookie de verificación que autoriza el cambio de contraseña
+// y eliminar la cookie de sesión con el OTP ya usado
     const { sealData } = await import("iron-session");
     const verifiedSealed = await sealData(
       { email: session.email, verified: true },

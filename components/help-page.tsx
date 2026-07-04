@@ -13,6 +13,11 @@ type HelpSection = {
   items: FAQItem[];
 };
 
+/**
+ * Sección de preguntas frecuentes comunes a todos los roles.
+ * Cubre problemas generales como recuperación de contraseña,
+ * problemas de acceso y errores de carga del sistema.
+ */
 const commonSection: HelpSection = {
   id: "general",
   title: "General",
@@ -36,6 +41,7 @@ const commonSection: HelpSection = {
   ],
 };
 
+/** Secciones de ayuda exclusivas para el rol paciente. */
 const patientOnlySections: HelpSection[] = [
   {
     id: "appointments",
@@ -79,6 +85,7 @@ const patientOnlySections: HelpSection[] = [
   },
 ];
 
+/** Secciones de ayuda exclusivas para el rol odontólogo. */
 const dentistOnlySections: HelpSection[] = [
   {
     id: "appointments",
@@ -118,6 +125,7 @@ const dentistOnlySections: HelpSection[] = [
   },
 ];
 
+/** Secciones de ayuda exclusivas para el rol administrador. */
 const adminOnlySections: HelpSection[] = [
   {
     id: "users",
@@ -157,6 +165,10 @@ const adminOnlySections: HelpSection[] = [
   },
 ];
 
+/**
+ * Secciones finales por rol, combinando la sección común con las específicas.
+ * Se definen fuera del componente para evitar recrearlas en cada render.
+ */
 const patientSections = [commonSection, ...patientOnlySections];
 const dentistSections = [commonSection, ...dentistOnlySections];
 const adminSections = [commonSection, ...dentistOnlySections, ...adminOnlySections];
@@ -212,7 +224,6 @@ export default function HelpPage({ role }: { role: "admin" | "dentist" | "patien
       </div>
 
       <div className="flex gap-10">
-        {/* Sidebar nav */}
         <div className="w-48 shrink-0 flex flex-col gap-1">
           {sections.map((section) => (
             <button
@@ -236,7 +247,6 @@ export default function HelpPage({ role }: { role: "admin" | "dentist" | "patien
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 bg-white rounded-xl border border-[#E2E6F0] px-8 py-6">
           <h2 className="text-base font-semibold text-[#1F2937] mb-1">{currentSection.title}</h2>
           <div className="mt-4">

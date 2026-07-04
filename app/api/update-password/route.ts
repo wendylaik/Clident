@@ -5,11 +5,26 @@ import { createClient } from "@supabase/supabase-js";
 
 const SESSION_PASSWORD = process.env.SESSION_SECRET!;
 
+/**
+ * Cliente de Supabase con service role key.
+ * Necesario para actualizar la contraseña de cualquier usuario
+ * sin requerir que esté autenticado actualmente.
+ */
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+/**
+ * Endpoint para el paso 3 del proceso de recuperación de contraseña.
+ *
+ * Verifica que el usuario haya completado el paso anterior comprobando
+ * la cookie recovery_verified. Si está verificada, actualiza la contraseña
+ * del usuario en Supabase Auth usando la service role key y elimina la cookie.
+ *
+ * @param request - Request con body JSON: { password: string }
+ * @returns JSON con { success: true } o { error: string }
+ */
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
@@ -21,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate password policy
+// Validar que la contraseña cumpla con la política de seguridad del sistema
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       return NextResponse.json(
@@ -55,7 +70,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the user by email
+// Buscar el usuario por correo para obtener su UUID y actualizar su contraseña
     const { data: userData, error: userError } =
       await supabaseAdmin.auth.admin.listUsers();
 
@@ -72,7 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Update the password
+  // Actualizar la contraseña y limpiar la cookie de verificación
     const { error: updateError } =
       await supabaseAdmin.auth.admin.updateUserById(user.id, { password });
 

@@ -24,6 +24,10 @@ type Props = {
   readonly?: boolean;
 };
 
+/**
+ * Color de relleno para cada estado de pieza según la codificación clínica estándar.
+ * Se usa "transparent" para piezas sanas para que sean clickeables sin mostrarse rellenas.
+ */
 const estadoFill: Record<EstadoPieza, string> = {
   sana: "transparent",
   caries: "#DC2626",
@@ -34,6 +38,7 @@ const estadoFill: Record<EstadoPieza, string> = {
   endodoncia: "#E45C3C",
 };
 
+/** Color del contorno para cada estado de pieza dental. */
 const estadoStroke: Record<EstadoPieza, string> = {
   sana: "#000000",
   caries: "#DC2626",
@@ -54,6 +59,7 @@ const estadoLabel: Record<EstadoPieza, string> = {
   endodoncia: "Endodoncia",
 };
 
+/** Lista de números FDI de las 32 piezas del odontograma adulto (11-48). */
 const ADULT_TEETH = [
   11, 12, 13, 14, 15, 16, 17, 18,
   21, 22, 23, 24, 25, 26, 27, 28,
@@ -61,6 +67,10 @@ const ADULT_TEETH = [
   41, 42, 43, 44, 45, 46, 47, 48,
 ];
 
+/**
+ * Mapa de conversión de numeración FDI internacional a posición interna (1-32).
+ * La base de datos almacena las piezas del 1 al 32, pero el SVG usa numeración FDI.
+ */
 const FDI_TO_POSITION: Record<number, number> = {
   18:1, 17:2, 16:3, 15:4, 14:5, 13:6, 12:7, 11:8,
   21:9, 22:10, 23:11, 24:12, 25:13, 26:14, 27:15, 28:16,
@@ -68,12 +78,33 @@ const FDI_TO_POSITION: Record<number, number> = {
   41:25, 42:26, 43:27, 44:28, 45:29, 46:30, 47:31, 48:32,
 };
 
+/**
+ * Componente de odontograma interactivo basado en un SVG de arcos dentales adultos.
+ * Carga el SVG desde /public/odontogram.svg y aplica estilos dinámicos según
+ * el estado de cada pieza dental usando inyección de CSS con !important para
+ * sobreescribir los estilos inline del SVG original.
+ *
+ * Usa delegación de eventos sobre el contenedor para manejar hover y click,
+ * leyendo className.baseVal para compatibilidad con elementos SVG.
+ *
+ * @param piezas - Array de piezas dentales con su estado actual
+ * @param onPiezaClick - Callback ejecutado al hacer clic en una pieza
+ * @param readonly - Si es true, deshabilita la interacción con el odontograma
+ */
 export default function Odontogram({ piezas, onPiezaClick, readonly = false }: Props) {
   const [svgContent, setSvgContent] = useState<string>("");
   const [hoveredTooth, setHoveredTooth] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+
+/**
+ * Ref que mantiene siempre el valor actualizado de piezas dentro de los event listeners.
+ * Necesario porque los listeners del SVG capturan el valor inicial de piezas en el closure.
+ */
   const piezasRef = useRef(piezas);
-    useEffect(() => { piezasRef.current = piezas; }, [piezas]);
+    
+/** Carga el contenido del SVG del odontograma desde la carpeta public. */
+  useEffect(() => { piezasRef.current = piezas; }, [piezas]);
 
   useEffect(() => {
     fetch("/odontogram.svg")
@@ -84,9 +115,20 @@ export default function Odontogram({ piezas, onPiezaClick, readonly = false }: P
       });
   }, []);
 
+/**
+ * Obtiene la pieza dental correspondiente a un número FDI del SVG.
+ * Convierte el número FDI a posición interna antes de buscar en el array.
+ * @param numero - Número FDI de la pieza (11-48)
+ * @returns PiezaDental o undefined si no se encuentra
+ */
 const getPieza = (numero: number): PiezaDental | undefined =>
   piezas.find((p) => p.numero_pieza === FDI_TO_POSITION[numero]);
 
+/**
+ * Genera los estilos CSS dinámicos para colorear cada pieza según su estado.
+ * Usa !important para sobreescribir los estilos inline del SVG original.
+ * Al hacer hover, el contorno de la pieza cambia a celeste (#00C2F3).
+ */
   const dynamicStyles = ADULT_TEETH.map((num) => {
     const pieza = getPieza(num);
     const estado = pieza?.estado ?? "sana";

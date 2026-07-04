@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 
+/** Pasos del flujo de recuperación de contraseña: correo → código → nueva contraseña. */
 type Step = "email" | "code" | "password";
 
 const Logo = () => (
@@ -26,6 +27,15 @@ const Logo = () => (
 const inputClass = "rounded-lg border border-[#D7DEF2] bg-white px-4 py-2.5 text-sm text-[#1F2937] placeholder:text-[#9CA3AF] focus:border-[#00C2F3] focus:outline-none focus:ring-2 focus:ring-[#00C2F3]/30 w-full";
 const buttonClass = "rounded-lg bg-[#283A97] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1F2D75] disabled:opacity-60 w-full";
 
+/**
+ * Formulario de recuperación de contraseña en 3 pasos:
+ * 1. Email: el usuario ingresa su correo y se envía un código OTP via Resend.
+ * 2. Código: el usuario ingresa el código de 6 dígitos recibido por correo.
+ * 3. Contraseña: el usuario define su nueva contraseña.
+ *
+ * Cada paso se comunica con su API route correspondiente:
+ * /api/send-recovery-email, /api/verify-recovery-code, /api/update-password.
+ */
 export function ForgotPasswordForm() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -37,6 +47,10 @@ export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+/**
+ * Paso 1: envía el correo al endpoint que genera el OTP y lo almacena en cookie cifrada.
+ * Al completarse exitosamente avanza al paso de verificación del código.
+ */
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -60,6 +74,10 @@ export function ForgotPasswordForm() {
     }
   };
 
+/**
+ * Paso 2: verifica el código OTP ingresado contra el almacenado en la cookie cifrada.
+ * Al completarse exitosamente avanza al paso de nueva contraseña.
+ */
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -83,6 +101,11 @@ export function ForgotPasswordForm() {
     }
   };
 
+/**
+ * Paso 3: actualiza la contraseña del usuario en Supabase Auth.
+ * Valida que ambas contraseñas coincidan antes de llamar al endpoint.
+ * Al completarse redirige al login con parámetro de confirmación.
+ */
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -118,7 +141,6 @@ export function ForgotPasswordForm() {
         <div className="p-8 md:p-10">
           <Logo />
 
-          {/* Step indicators */}
           <div className="flex items-center gap-2 mb-8">
             {(["email", "code", "password"] as Step[]).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
@@ -138,7 +160,6 @@ export function ForgotPasswordForm() {
             ))}
           </div>
 
-          {/* Step 1 — Email */}
           {step === "email" && (
             <div>
               <h2 className="text-2xl font-semibold text-[#283A97]">Recuperar contraseña</h2>
@@ -174,7 +195,6 @@ export function ForgotPasswordForm() {
             </div>
           )}
 
-          {/* Step 2 — Code */}
           {step === "code" && (
             <div>
               <h2 className="text-2xl font-semibold text-[#283A97]">Verificar código</h2>
@@ -212,7 +232,6 @@ export function ForgotPasswordForm() {
             </div>
           )}
 
-          {/* Step 3 — New password */}
           {step === "password" && (
             <div>
               <h2 className="text-2xl font-semibold text-[#283A97]">Nueva contraseña</h2>

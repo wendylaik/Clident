@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
+/**
+ * Elementos de navegación principal del odontólogo.
+ * Los items con enabled: false se muestran deshabilitados con badge "Pronto"
+ * indicando módulos planificados para versiones futuras.
+ */
 const navItems = [
   {
     label: "Dashboard",
@@ -97,6 +102,7 @@ const navItems = [
   },
 ];
 
+/** Elementos de navegación secundaria ubicados en la parte inferior de la sidebar. */
 const bottomItems = [
   {
     label: "Centro de ayuda",
@@ -111,6 +117,13 @@ const bottomItems = [
   },
 ];
 
+/**
+ * Layout del módulo del odontólogo. Envuelve todas las páginas del rol odontólogo.
+ * Proporciona la sidebar de navegación sticky, el header con nombre y rol del usuario,
+ * y el área de contenido principal con scroll independiente.
+ *
+ * @param children - Contenido de la página activa que se renderiza en el área principal
+ */
 export default function DentistLayout({
   children,
 }: {
@@ -120,6 +133,7 @@ export default function DentistLayout({
   const router = useRouter();
   const [userName, setUserName] = useState("");
 
+/** Carga el nombre del odontólogo autenticado para mostrarlo en el header. */
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = createClient();
@@ -135,12 +149,19 @@ export default function DentistLayout({
     fetchUser();
   }, []);
 
+/** Cierra la sesión del usuario y redirige al login. */
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
 
+/**
+ * Determina si un ítem de navegación está activo según la ruta actual.
+ * Para el dashboard usa coincidencia exacta, para el resto usa startsWith.
+ * @param href - Ruta del ítem a evaluar
+ * @returns true si la ruta actual corresponde al ítem
+ */
   const isActive = (href: string) => {
     if (href === "/dentist") return pathname === "/dentist";
     return pathname.startsWith(href);
@@ -148,10 +169,8 @@ export default function DentistLayout({
 
   return (
     <div className="flex min-h-screen bg-[#F1F4FA]">
-      {/* Sidebar */}
       <aside className="flex h-screen w-60 flex-col justify-between bg-[#F4F5F8] border-r border-[#E2E6F0] py-6 px-4 sticky top-0">
         <div className="flex flex-col gap-6">
-          {/* Logo */}
           <div className="flex items-center gap-2 px-2">
             <Image
               src="/images/logo-clinica.png"
@@ -166,7 +185,6 @@ export default function DentistLayout({
             </div>
           </div>
 
-          {/* Nav items */}
           <nav className="flex flex-col gap-1">
             {navItems.map((item) =>
               item.enabled ? (
@@ -200,7 +218,6 @@ export default function DentistLayout({
           </nav>
         </div>
 
-        {/* Bottom */}
         <div className="flex flex-col gap-1">
           {bottomItems.map((item) => (
             <Link
@@ -230,9 +247,7 @@ export default function DentistLayout({
         </div>
       </aside>
 
-      {/* Right side */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
         <header className="flex h-14 items-center justify-end border-b border-[#E2E6F0] bg-white px-8 gap-3">
           <span className="text-sm font-medium text-[#1F2937]">
             {userName || "..."}
@@ -242,7 +257,6 @@ export default function DentistLayout({
           </span>
         </header>
 
-        {/* Main content */}
         <main className="flex-1 overflow-y-auto p-8">
           {children}
         </main>

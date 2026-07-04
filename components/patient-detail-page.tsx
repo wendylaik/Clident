@@ -24,6 +24,15 @@ type Patient = {
 
 type Tab = "perfil" | "expediente";
 
+/**
+ * Página de detalle de un paciente. Reutilizable para admin y odontólogo.
+ * Muestra el perfil completo con dos pestañas: datos personales/antecedentes médicos
+ * y expediente clínico. Permite editar todos los campos excepto cédula y fecha de nacimiento.
+ * Se reinicia al cambiar el patientId para evitar mostrar datos del paciente anterior.
+ *
+ * @param basePath - Ruta base del rol actual (/admin/patients o /dentist/patients)
+ * @param patientId - UUID del paciente a mostrar
+ */
 export default function PatientDetailPage({
   basePath,
   patientId,
@@ -48,6 +57,10 @@ export default function PatientDetailPage({
   const [editAlergias, setEditAlergias] = useState("");
   const [editEnfermedades, setEditEnfermedades] = useState("");
 
+/**
+ * Carga los datos completos del paciente incluyendo su expediente clínico.
+ * Precarga los estados de edición con los valores actuales.
+ */
   const fetchPatient = async () => {
     const supabase = createClient();
     const { data } = await supabase
@@ -69,6 +82,10 @@ export default function PatientDetailPage({
     setIsLoading(false);
   };
 
+/**
+ * Reinicia la vista al perfil y modo lectura cada vez que cambia el paciente,
+ * luego carga los datos del nuevo paciente.
+ */
     useEffect(() => {
     if (patientId) {
         setIsEditing(false);
@@ -77,6 +94,11 @@ export default function PatientDetailPage({
     }
     }, [patientId]);
 
+/**
+ * Guarda los cambios editados del paciente en la base de datos.
+ * Valida nombre, formato de correo y peso antes de actualizar.
+ * Actualiza el estado local sin recargar la página completa.
+ */
   const handleSave = async () => {
     setSaveError(null);
     setSaveSuccess(false);
@@ -144,7 +166,6 @@ export default function PatientDetailPage({
 
   return (
     <div className="max-w-3xl">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()} className="p-2 rounded-lg text-[#6B7280] hover:bg-[#E8EBF7] hover:text-[#283A97] transition-colors">
@@ -176,7 +197,6 @@ export default function PatientDetailPage({
         )}
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-[#E2E6F0] mb-6">
         {(["perfil", "expediente"] as Tab[]).map((tab) => (
           <button
@@ -193,7 +213,6 @@ export default function PatientDetailPage({
         ))}
       </div>
 
-      {/* Tab: Perfil */}
       {activeTab === "perfil" && (
         <div className="flex flex-col gap-4">
           {saveSuccess && (
@@ -202,7 +221,6 @@ export default function PatientDetailPage({
             </div>
           )}
 
-          {/* Personal data */}
           <div className="bg-white rounded-xl border border-[#E2E6F0] p-6">
             <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">Datos personales</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -257,7 +275,6 @@ export default function PatientDetailPage({
             </div>
           </div>
 
-          {/* Medical background */}
           <div className="bg-white rounded-xl border border-[#E2E6F0] p-6">
             <h2 className="text-sm font-semibold text-[#283A97] uppercase tracking-wide mb-4">Antecedentes médicos</h2>
             <div className="flex flex-col gap-4">
@@ -296,7 +313,6 @@ export default function PatientDetailPage({
         </div>
       )}
 
-      {/* Tab: Expediente */}
       {activeTab === "expediente" && (
         <div className="bg-white rounded-xl border border-[#E2E6F0] p-6">
           {expediente ? (

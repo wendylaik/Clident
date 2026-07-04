@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
+/** Elementos de navegación principal del paciente. Todos están habilitados. */
 const navItems = [
   {
     label: "Dashboard",
@@ -65,6 +66,7 @@ const navItems = [
   },
 ];
 
+/** Elementos de navegación secundaria ubicados en la parte inferior de la sidebar. */
 const bottomItems = [
   {
     label: "Centro de ayuda",
@@ -79,6 +81,16 @@ const bottomItems = [
   },
 ];
 
+/**
+ * Layout del módulo del paciente. Envuelve todas las páginas del rol paciente.
+ * Proporciona la sidebar de navegación sticky, el header con nombre y rol del usuario,
+ * y el área de contenido principal con scroll independiente.
+ * 
+ * A diferencia de los layouts de admin y odontólogo, todos los ítems de navegación
+ * están habilitados y no hay badge "Pronto".
+ *
+ * @param children - Contenido de la página activa que se renderiza en el área principal
+ */
 export default function PatientLayout({
   children,
 }: {
@@ -88,6 +100,11 @@ export default function PatientLayout({
   const router = useRouter();
   const [userName, setUserName] = useState("");
 
+/**
+ * Carga el nombre del paciente autenticado para mostrarlo en el header.
+ * A diferencia de los roles internos, consulta la tabla paciente en lugar de usuario,
+ * usando id_usuario como referencia.
+ */
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = createClient();
@@ -103,12 +120,19 @@ export default function PatientLayout({
     fetchUser();
   }, []);
 
+/** Cierra la sesión del usuario y redirige al login. */
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
 
+/**
+ * Determina si un ítem de navegación está activo según la ruta actual.
+ * Para el dashboard usa coincidencia exacta, para el resto usa startsWith.
+ * @param href - Ruta del ítem a evaluar
+ * @returns true si la ruta actual corresponde al ítem
+ */
   const isActive = (href: string) => {
     if (href === "/patient") return pathname === "/patient";
     return pathname.startsWith(href);
@@ -116,10 +140,8 @@ export default function PatientLayout({
 
   return (
     <div className="flex min-h-screen bg-[#F1F4FA]">
-      {/* Sidebar */}
       <aside className="flex h-screen w-60 flex-col justify-between bg-[#F4F5F8] border-r border-[#E2E6F0] py-6 px-4 sticky top-0">
         <div className="flex flex-col gap-6">
-          {/* Logo */}
           <div className="flex items-center gap-2 px-2">
             <Image
               src="/images/logo-clinica.png"
@@ -134,7 +156,6 @@ export default function PatientLayout({
             </div>
           </div>
 
-          {/* Nav items */}
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => (
               <Link
@@ -184,7 +205,6 @@ export default function PatientLayout({
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
           <header className="flex h-14 items-center justify-end border-b border-[#E2E6F0] bg-white px-8 gap-3">
             <span className="text-sm font-medium text-[#6B7280]">
               {userName || "..."}

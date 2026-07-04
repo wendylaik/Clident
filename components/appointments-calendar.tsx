@@ -34,6 +34,8 @@ type Patient = {
 
 type CalendarRole = "admin" | "dentist" | "patient";
 
+
+/** Mapa de colores por estado de cita para los eventos del calendario. */
 const estadoColor: Record<string, string> = {
   programada: "#283A97",
   confirmada: "#059669",
@@ -42,7 +44,7 @@ const estadoColor: Record<string, string> = {
   no_asistio: "#E45C3C",
 };
 
-
+/** Mapa de etiquetas legibles por estado de cita. */
 const estadoLabel: Record<string, string> = {
   programada: "Programada",
   confirmada: "Confirmada",
@@ -51,6 +53,15 @@ const estadoLabel: Record<string, string> = {
   no_asistio: "No asistió",
 };
 
+/**
+ * Componente principal del calendario de citas. Reutilizable para los tres roles del sistema.
+ * 
+ * - Admin y odontólogo: vista mensual y semanal, todas las citas, opciones de gestión completas.
+ * - Paciente: vista semanal, sus citas con detalles y citas ajenas como bloques "Ocupado",
+ *   limitado a las próximas dos semanas.
+ *
+ * @param role - Rol del usuario: "admin" | "dentist" | "patient"
+ */
 export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -80,6 +91,13 @@ export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
 
   const calendarRef = useRef<FullCalendar>(null);
 
+
+/**
+ * Carga los datos del calendario según el rol del usuario.
+ * Para pacientes: obtiene sus citas propias con detalles y la disponibilidad
+ * general de la clínica para mostrar bloques ocupados sin exponer datos de otros pacientes.
+ * Para admin y odontólogo: obtiene todas las citas y la lista de pacientes activos.
+ */
   const fetchData = async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -126,7 +144,7 @@ export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
             setAppointments([...(citasPropias ?? []), ...citasAjenas]);
         }
         } else {
-        // Admin and dentist see all appointments
+
         const { data: citasData } = await supabase
             .from("cita")
             .select("*, paciente(nombre), servicio(nombre, duracion_horas)")
@@ -146,6 +164,12 @@ export default function AppointmentsCalendar({ role }: { role: CalendarRole }) {
 
   useEffect(() => { fetchData(); }, []);
 
+
+/**
+ * Transforma las citas en eventos para FullCalendar.
+ * Para pacientes: las citas ajenas se muestran como bloques grises sin información.
+ * Para admin y odontólogo: cada evento muestra nombre del paciente y servicio.
+ */
 const events = appointments.map((a) => {
   const isOwn = a.id_paciente === currentPatientId;
   const durationHours = a.servicio?.duracion_horas ?? 1;
@@ -180,10 +204,19 @@ const events = appointments.map((a) => {
   };
 });
 
+
+/** Filtra los eventos según el toggle de citas canceladas (solo para admin y odontólogo). */
 const filteredEvents = role === "patient" 
   ? events 
   : events.filter((e) => showCancelled || e.extendedProps.appointment?.estado !== "cancelada");
 
+
+/**
+ * Verifica si una fecha y hora están dentro del horario de atención de la clínica.
+ * Horario: lunes a viernes 8:00-11:30 y 13:00-18:00, sábados 10:00-14:00, domingos cerrado.
+ * @param date - Objeto Date a verificar
+ * @returns true si la clínica está abierta en ese horario
+ */
   const isClinicOpen = (date: Date): boolean => {
     const day = date.getDay();
     if (day === 0) return false; // Sunday closed
@@ -201,10 +234,23 @@ const filteredEvents = role === "patient"
       (timeInMinutes >= afternoonStart && timeInMinutes < afternoonEnd);
   };
 
+/**
+ * Verifica si un horario está disponible para agendar una cita.
+ * Valida que la hora no sea en el pasado, que esté dentro del horario de la clínica
+ * y que no se solape con ninguna cita existente.
+ * Trabaja en minutos para evitar problemas de zona horaria.
+ *
+ * @param date - Fecha en formato YYYY-MM-DD
+ * @param time - Hora en formato HH:MM
+ * @param serviceId - UUID del servicio a agendar
+ * @param excludeId - UUID de cita a ignorar en la validación (usado al reprogramar)
+ * @returns true si el horario está disponible, false si no
+ */
 const isSlotAvailable = (date: string, time: string, serviceId: string, excludeId?: string): boolean => {
 
-    // Validate that appointment is not in the past
 const now = new Date();
+
+/** Fecha de hoy en formato YYYY-MM-DD calculada sin usar toISOString() para evitar problemas de zona horaria. */
 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -246,6 +292,12 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
   });
 };
 
+
+/**
+ * Maneja el clic en un slot vacío del calendario.
+ * Verifica que la fecha no sea pasada y que esté dentro del horario de la clínica
+ * antes de abrir el modal de nueva cita con la fecha y hora preseleccionadas.
+ */
     const handleDateClick = (info: { dateStr: string; date: Date }) => {
         if (role === "patient") {
         if (info.date < new Date()) return; // no permitir pasado
@@ -275,6 +327,11 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setShowNewModal(true);
     };
 
+/**
+ * Maneja el clic en un evento del calendario.
+ * Para bloques "Ocupado" (citas ajenas al paciente) no abre el modal.
+ * Para citas propias abre el modal de detalle con las opciones disponibles según el rol.
+ */
    const handleEventClick = (info: EventClickArg) => {
         console.log("extendedProps:", info.event.extendedProps);
         const appointment = info.event.extendedProps.appointment as Appointment | null;
@@ -286,6 +343,11 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         setShowDetailModal(true);
     };
 
+/**
+ * Crea una nueva cita en la base de datos.
+ * Valida que los campos estén completos y que el horario esté disponible
+ * antes de insertar en la tabla cita.
+ */
   const handleCreateAppointment = async () => {
     if (!newServiceId || !selectedDate || !selectedTime) {
       setNewError("Complete todos los campos requeridos");
@@ -326,6 +388,10 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setNewLoading(false);
   };
 
+/**
+ * Cancela una cita cambiando su estado a "cancelada".
+ * Disponible para todos los roles sobre sus citas correspondientes.
+ */
   const handleCancelAppointment = async () => {
     if (!selectedAppointment) return;
     setDetailLoading(true);
@@ -336,6 +402,10 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setDetailLoading(false);
   };
 
+/**
+ * Confirma la asistencia del paciente a una cita cambiando su estado a "confirmada".
+ * Solo disponible para el paciente sobre sus propias citas programadas.
+ */
   const handleConfirmAttendance = async () => {
     if (!selectedAppointment) return;
     setDetailLoading(true);
@@ -346,6 +416,11 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setDetailLoading(false);
   };
 
+/**
+ * Marca la asistencia o inasistencia del paciente a una cita.
+ * Solo disponible para admin y odontólogo.
+ * @param attended - true para marcar como completada, false para no_asistio
+ */
   const handleMarkAttendance = async (attended: boolean) => {
     if (!selectedAppointment) return;
     setDetailLoading(true);
@@ -358,6 +433,11 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
     setDetailLoading(false);
   };
 
+/**
+ * Reprograma una cita a una nueva fecha y hora.
+ * Valida disponibilidad del nuevo horario excluyendo la cita actual.
+ * Solo disponible para admin y odontólogo.
+ */
   const handleReschedule = async () => {
     if (!selectedAppointment || !rescheduleDate || !rescheduleTime) {
       setDetailError("Complete la nueva fecha y hora");
@@ -388,14 +468,20 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const [today] = useState(() => new Date());
 
-    const [minDate] = useState(() => {
+/** 
+ * Fecha mínima del calendario para el paciente.
+ * Se calcula retrocediendo al lunes de la semana actual para mostrar
+ * la semana completa aunque algunos días ya hayan pasado.
+ */
+const [minDate] = useState(() => {
   const d = new Date();
-  // Go back to Monday of current week
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday
+  const diff = day === 0 ? -6 : 1 - day; 
   d.setDate(d.getDate() + diff);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 });
+
+/** Fecha máxima del calendario para el paciente: dos semanas a partir de hoy. */
     const [maxDate] = useState(() => {
         
     const date = new Date();
@@ -405,7 +491,6 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-[#283A97]">
@@ -437,7 +522,7 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
                 </div>
                 )}
 
-      {/* Legend */}
+{/* Leyenda de colores: paciente solo ve programada y confirmada, internos ven todos los estados */}
         <div className="flex gap-4 mb-4 flex-wrap">
         {Object.entries(estadoLabel)
             .filter(([key]) => 
@@ -453,7 +538,12 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
             ))}
         </div>
 
-      {/* Calendar */}
+{/* 
+  Calendario FullCalendar con estilos personalizados según la paleta de colores de Clident.
+  - Vista mensual por defecto para admin y odontólogo, semanal para paciente.
+  - businessHours resalta el horario de atención de la clínica.
+  - validRange limita la navegación del paciente a dos semanas.
+*/}
       {isLoading ? (
         <div className="flex items-center justify-center h-64 bg-white rounded-xl border border-[#E2E6F0]">
           <p className="text-sm text-[#6B7280]">Cargando citas...</p>
@@ -524,7 +614,8 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         </div>
       )}
 
-      {/* New appointment modal */}
+{/* Modal para agendar una nueva cita. Para el paciente la fecha y hora son de solo lectura
+    porque se precargan desde el slot seleccionado en el calendario. */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
@@ -603,7 +694,6 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         </div>
       )}
 
-      {/* Detail modal */}
       {showDetailModal && selectedAppointment && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
@@ -643,7 +733,6 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
               )}
             </div>
 
-            {/* Reschedule form */}
             {showReschedule && (
               <div className="mb-4 flex flex-col gap-3 p-4 bg-[#F4F5F8] rounded-xl">
                 <p className="text-sm font-medium text-[#283A97]">Reprogramar cita</p>
@@ -673,7 +762,6 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Patient actions */}
       {role === "patient" && (
         <>
           {selectedAppointment.estado === "programada" && !isPast && (
@@ -694,7 +782,6 @@ const currentMinutes = now.getHours() * 60 + now.getMinutes();
         </>
       )}
 
-      {/* Admin/dentist actions */}
       {role !== "patient" && (
         <>
           {["programada", "confirmada"].includes(selectedAppointment.estado) && (

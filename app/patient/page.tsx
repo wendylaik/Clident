@@ -15,6 +15,7 @@ type Appointment = {
   servicio: ServicioType | ServicioType[] | null;
 };
 
+/** Mapa de colores por estado de cita para los badges de las próximas citas. */
 const estadoColor: Record<string, string> = {
   programada: "#283A97",
   confirmada: "#059669",
@@ -23,6 +24,7 @@ const estadoColor: Record<string, string> = {
   no_asistio: "#E45C3C",
 };
 
+/** Mapa de etiquetas legibles por estado de cita. */
 const estadoLabel: Record<string, string> = {
   programada: "Programada",
   confirmada: "Confirmada",
@@ -31,17 +33,30 @@ const estadoLabel: Record<string, string> = {
   no_asistio: "No asistió",
 };
 
+/**
+ * Extrae el servicio de un campo que puede ser objeto o array según el join de Supabase.
+ * @param servicio - Objeto ServicioType, array de ServicioType, o null
+ * @returns ServicioType o null si no existe
+ */
 function getServicio(servicio: ServicioType | ServicioType[] | null): ServicioType | null {
   if (!servicio) return null;
   return Array.isArray(servicio) ? servicio[0] ?? null : servicio;
 }
 
+/**
+ * Dashboard del paciente. Muestra un saludo personalizado, las próximas 3 citas
+ * programadas o confirmadas, y accesos rápidos a las secciones más usadas.
+ */
 export default function PatientDashboard() {
   const [patientName, setPatientName] = useState("");
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+/**
+ * Carga los datos del dashboard: nombre del paciente y sus próximas 3 citas
+ * (excluyendo canceladas, no asistidas y completadas), ordenadas por fecha y hora.
+ */
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient();

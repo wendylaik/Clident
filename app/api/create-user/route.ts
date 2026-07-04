@@ -1,11 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+/**
+ * Cliente de Supabase con service role key.
+ * Tiene permisos administrativos completos y bypasea las políticas RLS.
+ * Se usa exclusivamente en el servidor para operaciones que el cliente normal no puede realizar.
+ */
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+/**
+ * Endpoint para crear usuarios internos (administrador, odontólogo) y pacientes.
+ * Utiliza la service role key para asignar el rol en app_metadata del JWT,
+ * garantizando que el middleware pueda leerlo de forma segura.
+ *
+ * Para pacientes, además de crear el usuario en Auth y la tabla usuario,
+ * crea el registro en paciente y llama a la función PostgreSQL
+ * crear_expediente_y_odontograma para generar el expediente y las 32 piezas dentales.
+ *
+ * Si cualquier paso falla después de crear el usuario en Auth,
+ * se elimina el usuario para evitar registros huérfanos.
+ *
+ * @param request - Request con body JSON: { nombre, correo, password, rol, cedula?, birthDate?, phone? }
+ * @returns JSON con { success: true } o { error: string }
+ */
 export async function POST(request: Request) {
   try {
     const { nombre, correo, password, rol, cedula, birthDate, phone } = await request.json();
@@ -14,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
     }
 
-    // Check if email already exists
+// Verificar que el correo no esté en uso antes de crear el usuario en Auth
     const { data: existing } = await supabaseAdmin
       .from("usuario")
       .select("id")
@@ -25,7 +45,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "El correo ya está asociado a otro usuario" }, { status: 400 });
     }
 
-    // Check if cedula already exists (only for patients)
     if (rol === "paciente" && cedula) {
       const { data: existingCedula } = await supabaseAdmin
         .from("paciente")
@@ -38,7 +57,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create user in Supabase Auth
+// Crear el usuario en Supabase Auth con el rol en app_metadata
+// email_confirm: true omite la verificación de correo
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: correo,
       password,
@@ -50,9 +70,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authError?.message ?? "No se pudo crear el usuario" }, { status: 500 });
     }
 
+
+// Insertar en la tabla usuario del sistema
+// Si falla, eliminar el usuario de Auth para evitar inconsistencias
     const userId = authData.user.id;
 
-    // Insert in usuario table
     const { error: usuarioError } = await supabaseAdmin
       .from("usuario")
       .insert({ id: userId, nombre, correo, rol, es_activo: true });
@@ -62,7 +84,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: usuarioError.message }, { status: 500 });
     }
 
-    // If rol is paciente, create paciente record with full data
+
+// Para pacientes: crear registro en paciente y generar expediente + odontograma
+// mediante la función PostgreSQL crear_expediente_y_odontograma
     if (rol === "paciente") {
       const { data: pacienteData, error: pacienteError } = await supabaseAdmin
         .from("paciente")
@@ -86,7 +110,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: pacienteError.message }, { status: 500 });
       }
 
-      // Create expediente and odontograma via RPC
       const { error: rpcError } = await supabaseAdmin.rpc("crear_expediente_y_odontograma", {
         p_id_paciente: pacienteData.id,
       });
